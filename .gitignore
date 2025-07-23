@@ -1,0 +1,41 @@
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environments
+venv/
+env/
+.venv/
+
+# Environment variables
+.env
+.env.*
+*.env
+
+# Node.js dependencies
+/node_modules/
+/admin-dashboard/dist/
+npm-debug.log*
+yarn-error.log*
+
+# IDE/Editor folders
+.vscode/
+.idea/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Other
+/ssl/
+ngrok
+ngrok.exe
+
+# Secret files
+ai_conversation_engine/api key.txt
+ecommerce_integration/API.txt

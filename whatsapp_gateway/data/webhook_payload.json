@@ -1,0 +1,2 @@
+New-Item -ItemType Directory -Path C:\AI_Assistant_Solution\whatsapp_gateway\data -Force
+echo '{"entry":[{"changes":[{"field":"messages","value":{"messages":[{"from":"1234567890","id":"msg_123","type":"text","text":{"body":"Hello"}}]}}]}' | Set-Content -Encoding utf8 C:\AI_Assistant_Solution\whatsapp_gateway\data\webhook_payload.json

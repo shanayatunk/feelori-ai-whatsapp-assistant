@@ -1,0 +1,1 @@
+{  "customer_phone": "+1234567890",  "customer_wa_id": "1234567890",  "message": {    "whatsapp_message_id": "msg_123",    "message_type": "text",    "content": "Hello, I need help!",    "status": "sent"  }}

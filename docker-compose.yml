@@ -1,0 +1,163 @@
+services:
+  whatsapp-gateway:
+    build:
+      context: ./whatsapp_gateway
+      dockerfile: Dockerfile
+    command: sh -c "flask db upgrade && gunicorn --config /app/gunicorn.conf.py src.main:app"
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./whatsapp_gateway/.env
+    environment:
+      - FLASK_APP=src.main
+      - ECOMMERCE_SERVICE_URL=http://ecommerce-integration:5002
+      - AI_SERVICE_URL=http://ai-conversation-engine:5001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - ai-assistant-network
+    volumes:
+      # This volume is needed to save the generated migration scripts to your host
+      - ./whatsapp_gateway/migrations:/app/migrations
+      - whatsapp_data:/app/data
+
+  celery-worker:
+    build:
+      context: ./whatsapp_gateway
+      dockerfile: Dockerfile
+    command: celery -A src.tasks:celery_app worker --loglevel=info --concurrency=2
+    depends_on:
+      redis:
+        condition: service_started
+      whatsapp-gateway:
+        condition: service_healthy
+    env_file:
+      - ./whatsapp_gateway/.env
+    environment:
+        # This worker needs the AI service URL to make API calls
+      - AI_SERVICE_URL=http://ai-conversation-engine:5001
+    restart: unless-stopped
+    networks:
+      - ai-assistant-network
+    volumes:
+      - whatsapp_data:/app/data
+
+  # --- SIMPLIFIED SERVICES BELOW ---
+
+  ai-conversation-engine:
+    build:
+      context: ./ai_conversation_engine
+      dockerfile: Dockerfile
+    # REMOVED: command, depends_on, and volumes for migrations
+    ports:
+      - "5001:5001"
+    env_file:
+      - ./ai_conversation_engine/.env
+    environment:
+      - FLASK_APP=src.main
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/ai/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - ai-assistant-network
+
+  ecommerce-integration:
+    build:
+      context: ./ecommerce_integration
+      dockerfile: Dockerfile
+    # REMOVED: command, depends_on, and volumes for migrations
+    ports:
+      - "5002:5002"
+    env_file:
+      - ./ecommerce_integration/.env
+    environment:
+      - FLASK_APP=src.main
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/ecommerce/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - ai-assistant-network
+
+  admin-dashboard:
+    build:
+      context: ./admin-dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    networks:
+      - ai-assistant-network
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - ai-assistant-network
+
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=ai_assistant
+      - POSTGRES_USER=ai_assistant
+      - POSTGRES_PASSWORD=ai_assistant_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "ai_assistant"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - ai-assistant-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      whatsapp-gateway:
+        condition: service_healthy
+      ai-conversation-engine:
+        condition: service_healthy
+      ecommerce-integration:
+        condition: service_healthy
+      admin-dashboard:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ai-assistant-network
+
+volumes:
+  whatsapp_data:
+  # ai_data and ecommerce_data are no longer needed for separate volumes
+  redis_data:
+  postgres_data:
+
+networks:
+  ai-assistant-network:
+    driver: bridge
