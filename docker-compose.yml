@@ -3,11 +3,10 @@ services:
     build:
       context: ./whatsapp_gateway
       dockerfile: Dockerfile
-    command: sh -c "flask db upgrade && gunicorn --config /app/gunicorn.conf.py src.main:app"
     ports:
       - "5000:5000"
     env_file:
-      - ./.env  # Loads root .env
+      - ./.env
     environment:
       - FLASK_APP=src.main
       - ECOMMERCE_SERVICE_URL=http://ecommerce-integration:5002
@@ -26,7 +25,6 @@ services:
     networks:
       - ai-assistant-network
     volumes:
-      # This volume is needed to save the generated migration scripts to your host
       - ./whatsapp_gateway/migrations:/app/migrations
       - whatsapp_data:/app/data
 
@@ -41,9 +39,8 @@ services:
       whatsapp-gateway:
         condition: service_healthy
     env_file:
-      - ./.env  # Loads root .env
+      - ./.env
     environment:
-      # This worker needs the AI service URL to make API calls
       - AI_SERVICE_URL=http://ai-conversation-engine:5001
     restart: unless-stopped
     networks:
@@ -51,19 +48,20 @@ services:
     volumes:
       - whatsapp_data:/app/data
 
-  # --- SIMPLIFIED SERVICES BELOW ---
-
   ai-conversation-engine:
     build:
       context: ./ai_conversation_engine
       dockerfile: Dockerfile
-    # REMOVED: command, depends_on, and volumes for migrations
     ports:
       - "5001:5001"
     env_file:
-      - ./.env  # Loads root .env
+      - ./.env
     environment:
       - FLASK_APP=src.main
+      # --- ADDED THIS BLOCK ---
+      - ECOMMERCE_API_URL=http://ecommerce-integration:5002
+      - ALLOWED_ORIGINS=http://localhost:8080,http://127.0.0.1:8080
+      # ---------------------
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/ai/health"]
       interval: 30s
@@ -77,11 +75,10 @@ services:
     build:
       context: ./ecommerce_integration
       dockerfile: Dockerfile
-    # REMOVED: command, depends_on, and volumes for migrations
     ports:
       - "5002:5002"
     env_file:
-      - ./.env  # Loads root .env
+      - ./.env
     environment:
       - FLASK_APP=src.main
     healthcheck:
@@ -102,6 +99,7 @@ services:
     restart: unless-stopped
     networks:
       - ai-assistant-network
+
   redis:
     image: redis:7-alpine
     ports:
@@ -140,21 +138,16 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl:ro
     depends_on:
-      whatsapp-gateway:
-        condition: service_healthy
-      ai-conversation-engine:
-        condition: service_healthy
-      ecommerce-integration:
-        condition: service_healthy
-      admin-dashboard:
-        condition: service_healthy
+      - whatsapp-gateway
+      - ai-conversation-engine
+      - ecommerce-integration
+      - admin-dashboard
     restart: unless-stopped
     networks:
       - ai-assistant-network
 
 volumes:
   whatsapp_data:
-  # ai_data and ecommerce_data are no longer needed for separate volumes
   redis_data:
   postgres_data:
 

@@ -128,19 +128,23 @@ class DocumentProcessor:
 
     def _sync_extract_text_from_html(self, html_content: str) -> str:
         """Synchronous implementation of HTML text extraction."""
-        soup = BeautifulSoup(html_content, "html.parser")
-        
-        # Remove irrelevant tags
-        for element in soup(["script", "style", "nav", "header", "footer", "aside"]):
-            element.decompose()
-        
-        # Add spacing and line breaks for structure
-        for element in soup.find_all(['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li']):
-            element.insert_after('\n')
-        
-        text = soup.get_text(separator=" ", strip=True)
-        text = re.sub(r'\s+', ' ', text).strip()
-        return text
+        try:
+            soup = BeautifulSoup(html_content, "html.parser")
+            
+            # Remove irrelevant tags
+            for element in soup(["script", "style", "nav", "header", "footer", "aside"]):
+                element.decompose()
+            
+            # Add spacing and line breaks for structure
+            for element in soup.find_all(['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li']):
+                element.insert_after('\n')
+            
+            text = soup.get_text(separator=" ", strip=True)
+            text = re.sub(r'\s+', ' ', text).strip()
+            return text
+        except Exception as e:
+            logger.error(f"HTML parsing failed: {e}")
+            return "" # Return empty string on parse failure
 
     async def extract_text_from_markdown(self, markdown_content: str) -> str:
         """Asynchronously extracts plain text from Markdown content."""
@@ -189,7 +193,7 @@ class DocumentProcessor:
                 return []
             
             chunks = await self.chunk_document(processed_text, doc_type, source_file)
-            logger.info(f"Processed document into {len(chunks)} chunks", source=source_ifile)
+            logger.info(f"Processed document into {len(chunks)} chunks", source=source_file) # FIX: source_ifile -> source_file
             return chunks
             
         except Exception as e:

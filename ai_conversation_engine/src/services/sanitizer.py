@@ -20,7 +20,7 @@ MAX_CONSECUTIVE_CHARS = 100  # Prevent spam with long strings of repeated charac
 
 class InputSanitizer:
     @staticmethod
-    def sanitize(message: str, strict_mode: bool = False) -> str:
+    def sanitize(message: str, strict_mode: bool = True) -> str:  # Default to True for security
         """
         Cleans and sanitizes user-provided text input with enhanced security.
         
@@ -40,32 +40,36 @@ class InputSanitizer:
 
         try:
             # 1. Normalize Unicode characters to a standard form (NFKC)
-            # This helps prevent encoding-based attacks and standardizes input.
             sanitized_message = unicodedata.normalize('NFKC', message)
             
-            # 2. Truncate to a safe maximum length to prevent overflow issues.
+            # 2. Truncate to a safe maximum length
             sanitized_message = sanitized_message[:MAX_MESSAGE_LENGTH]
             
-            # 3. In strict mode, remove suspicious patterns like script tags.
-            if strict_mode:
-                sanitized_message = SUSPICIOUS_PATTERNS_REGEX.sub('', sanitized_message)
+            # 3. Always remove suspicious patterns for security (regardless of strict_mode)
+            sanitized_message = SUSPICIOUS_PATTERNS_REGEX.sub('', sanitized_message)
             
-            # 4. Escape HTML special characters to prevent XSS attacks.
+            # 4. In strict mode, apply additional sanitization
+            if strict_mode:
+                # Remove additional potentially dangerous patterns
+                sanitized_message = re.sub(r'on\w+\s*=', '', sanitized_message, flags=re.IGNORECASE)
+                sanitized_message = re.sub(r'style\s*=', '', sanitized_message, flags=re.IGNORECASE)
+            
+            # 5. Escape HTML special characters to prevent XSS attacks.
             sanitized_message = html.escape(sanitized_message, quote=True)
             
-            # 5. Remove non-printable control characters.
+            # 6. Remove non-printable control characters.
             sanitized_message = CONTROL_CHAR_REGEX.sub('', sanitized_message)
             
-            # 6. Normalize all whitespace (tabs, newlines, etc.) to a single space.
+            # 7. Normalize all whitespace (tabs, newlines, etc.) to a single space.
             sanitized_message = EXCESSIVE_WHITESPACE_REGEX.sub(' ', sanitized_message)
             
-            # 7. Prevent character spam (e.g., "aaaaa...").
+            # 8. Prevent character spam (e.g., "aaaaa...").
             sanitized_message = InputSanitizer._prevent_character_spam(sanitized_message)
             
-            # 8. Strip any leading or trailing whitespace that may have been introduced.
+            # 9. Strip any leading or trailing whitespace that may have been introduced.
             sanitized_message = sanitized_message.strip()
             
-            # 9. Perform a final length check after all transformations.
+            # 10. Perform a final length check after all transformations.
             if len(sanitized_message) < MIN_MESSAGE_LENGTH:
                 return ""
                 

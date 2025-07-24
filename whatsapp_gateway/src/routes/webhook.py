@@ -22,7 +22,7 @@ from redis.exceptions import RedisError
 from src.models import db
 from src.models.conversation import Conversation, Message
 from src.tasks import process_and_reply_task
-from src.services.cache import redis_client
+from src.cache import redis_client
 
 import bleach
 import structlog

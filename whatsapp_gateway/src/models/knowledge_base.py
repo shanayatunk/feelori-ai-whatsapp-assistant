@@ -11,6 +11,7 @@ from sqlalchemy.dialects.postgresql import JSONB as VectorType
 from .base import BaseModel, DocumentType
 from . import db
 from sqlalchemy import Index
+from sqlalchemy.dialects.postgresql import JSONB
 
 logger = logging.getLogger(__name__)
 
@@ -73,3 +74,14 @@ class DocumentChunk(BaseModel):
     def get_embedding(self) -> Optional[List[float]]:
         """Gets the embedding vector."""
         return self.embedding
+
+class ConversationContext(BaseModel):
+    __tablename__ = 'conversation_contexts'
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id'))
+    context_data = db.Column(JSONB)
+
+class IntentPattern(BaseModel):
+    __tablename__ = 'intent_patterns'
+    pattern = db.Column(db.String(255))
+    intent = db.Column(db.String(100))
+    confidence = db.Column(db.Float)

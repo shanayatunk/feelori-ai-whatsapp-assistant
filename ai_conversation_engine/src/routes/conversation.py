@@ -1,5 +1,4 @@
 # ai_conversation_engine/src/routes/conversation.py
-
 import logging
 import uuid
 import time
@@ -13,7 +12,7 @@ from pydantic import BaseModel, Field, ValidationError
 from src.auth import require_api_key
 from src.config import settings
 from src.exceptions import CircuitBreakerOpenError
-from src.services.rate_limiter import RateLimiter
+from src.utils.rate_limiter import RateLimiter
 from src.services.sanitizer import InputSanitizer
 
 # --- Observability ---
@@ -44,7 +43,6 @@ class ServiceUnavailableError(Exception):
     pass
 
 # --- Pydantic Models for a Strong API Contract ---
-
 class MessageRequest(BaseModel):
     conv_id: str = Field(..., min_length=8, max_length=100, pattern=r'^[a-zA-Z0-9_-]+$')
     message: str = Field(..., min_length=1, max_length=4096)
@@ -79,17 +77,22 @@ rate_limiter = RateLimiter(
 )
 
 # --- Security Decorators & Functions ---
-
 async def _validate_csrf(conv_id: str, token: str) -> bool:
-    if not token: return False
+    if not token:
+        return False
     try:
-        client = current_app.conversation_manager._redis_client
-        if not client: raise ServiceUnavailableError("Redis client unavailable.")
+        client = current_app.conversation_manager.get_redis_client()
+        if not client:
+            raise ServiceUnavailableError("Redis client unavailable for CSRF validation.")
         
-        stored_token = await client.get(f"csrf:{conv_id}")
-        return stored_token is not None and stored_token == token
+        stored_token_bytes = await client.get(f"csrf:{conv_id}")
+        if stored_token_bytes and stored_token_bytes.decode() == token:
+            # Security Fix: Delete the token immediately after successful validation
+            await client.delete(f"csrf:{conv_id}")
+            return True
+        return False
     except Exception as e:
-        logger.error(f"CSRF validation failed for conv_id {conv_id}", error=str(e))
+        logger.error(f"CSRF validation failed for conv_id {conv_id}", extra={"error": str(e)})
         return False
 
 def require_csrf(f):
@@ -102,7 +105,7 @@ def require_csrf(f):
 
             if not conv_id or not await _validate_csrf(conv_id, token):
                 raise CSRFValidationError("Invalid or missing CSRF token.")
-                
+
             return await f(*args, **kwargs)
         except CSRFValidationError as e:
             API_ERRORS.labels(endpoint=f.__name__, error_type='csrf_error').inc()
@@ -111,7 +114,6 @@ def require_csrf(f):
     return decorated
 
 # --- API Endpoints ---
-
 @conversation_bp.route('/session/init', methods=['POST'])
 @require_api_key
 async def init_session():
@@ -121,16 +123,17 @@ async def init_session():
             conv_id = str(uuid.uuid4())
             csrf_token = str(uuid.uuid4())
             expires_at = int(time.time()) + settings.CONVERSATION_TTL_SECONDS
+            
+            client = current_app.conversation_manager.get_redis_client()
+            if not client:
+                raise ServiceUnavailableError("Redis client is unavailable.")
 
-            client = current_app.conversation_manager._redis_client
-            if not client: raise ServiceUnavailableError("Redis client is unavailable.")
-            
             await client.setex(f"csrf:{conv_id}", settings.CONVERSATION_TTL_SECONDS, csrf_token)
-            
+
             response_data = CSRFResponse(conv_id=conv_id, csrf_token=csrf_token, expires_at=expires_at)
             return jsonify(response_data.model_dump()), 200
-        except Exception as e:
-            logger.error("Failed to initialize session", error=str(e), exc_info=True)
+        except Exception:
+            logger.error("Failed to initialize session", exc_info=True)
             API_ERRORS.labels(endpoint='init_session', error_type='internal_error').inc()
             error_resp = ErrorResponse(error="service_unavailable", message="Could not initialize session.")
             return jsonify(error_resp.model_dump()), 503
@@ -141,15 +144,15 @@ async def init_session():
 @require_csrf
 async def process_conversation():
     """Main endpoint to process a user's message."""
-    with tracer.start_as_current_span("process_conversation") as span, REQUEST_DURATION.labels('process').time():
+    with tracer.start_as_current_span("process_conversation"), REQUEST_DURATION.labels('process').time():
         try:
             json_data = await request.get_json()
             validated_data = MessageRequest.model_validate(json_data)
-            
+
             sanitized_message = InputSanitizer.sanitize(validated_data.message, strict_mode=True)
             if not sanitized_message:
                 raise ValidationError.from_exception_data("Message is empty after sanitization.", [])
-
+            
             ai_processor = current_app.ai_processor
             result = await ai_processor.process_message(
                 message=sanitized_message,
@@ -159,7 +162,11 @@ async def process_conversation():
                 user_id=validated_data.user_id
             )
 
-            if result.error: raise Exception(f"Processor error: {result.error}")
+            if result.error:
+                # Map processor errors to appropriate HTTP responses
+                if result.error == "service_unavailable":
+                    raise CircuitBreakerOpenError(result.response)
+                raise Exception(f"Processor error: {result.error}")
 
             api_response = APIResponse(response=result.response)
             return jsonify(api_response.model_dump()), 200
@@ -172,9 +179,9 @@ async def process_conversation():
             API_ERRORS.labels(endpoint='process', error_type='circuit_breaker').inc()
             error_resp = ErrorResponse(error="service_unavailable", message=str(e))
             return jsonify(error_resp.model_dump()), 503
-        except Exception as e:
+        except Exception:
             API_ERRORS.labels(endpoint='process', error_type='internal_error').inc()
-            logger.error("Unexpected error in /process", error=str(e), exc_info=True)
+            logger.error("Unexpected error in /process", exc_info=True)
             error_resp = ErrorResponse(error="internal_server_error", message="An unexpected error occurred.")
             return jsonify(error_resp.model_dump()), 500
 
@@ -189,19 +196,23 @@ async def submit_feedback():
             
             USER_SATISFACTION.labels(rating=str(validated_data.rating)).inc()
             
-            sanitized_comment = InputSanitizer.sanitize(validated_data.comment) if validated_data.comment else None
+            # Sanitized comment is available if needed for logging or storage
+            _ = InputSanitizer.sanitize(validated_data.comment) if validated_data.comment else None
             
-            logger.info("User feedback received", conv_id=validated_data.conv_id, rating=validated_data.rating)
-            
+            logger.info(
+                "User feedback received",
+                extra={"conv_id": validated_data.conv_id, "rating": validated_data.rating}
+            )
+
             return jsonify({"status": "success", "message": "Thank you for your feedback!"}), 200
 
         except ValidationError as e:
             API_ERRORS.labels(endpoint='feedback', error_type='validation_error').inc()
             error_resp = ErrorResponse(error="bad_request", message=str(e))
             return jsonify(error_resp.model_dump()), 400
-        except Exception as e:
+        except Exception:
             API_ERRORS.labels(endpoint='feedback', error_type='internal_error').inc()
-            logger.error("Error processing feedback", error=str(e), exc_info=True)
+            logger.error("Error processing feedback", exc_info=True)
             error_resp = ErrorResponse(error="internal_server_error", message="Could not process feedback.")
             return jsonify(error_resp.model_dump()), 500
 
@@ -215,24 +226,25 @@ async def health_check():
                     current_app.ai_processor.health_check(),
                     current_app.conversation_manager.health_check(),
                     return_exceptions=True
-                ), timeout=5.0
+                ),
+                timeout=5.0
             )
         except asyncio.TimeoutError:
             return jsonify({"status": "unhealthy", "message": "Health check timed out."}), 503
 
         processor_health, conversation_health = results
-        
+
         health_status = {
             "status": "healthy",
             "timestamp": int(time.time()),
             "dependencies": {
-                "ai_processor": processor_health if not isinstance(processor_health, Exception) else {"status": "unhealthy", "error": str(processor_health)},
-                "conversation_manager": conversation_health if not isinstance(conversation_health, Exception) else {"status": "unhealthy", "error": str(conversation_health)},
+                "ai_processor": processor_health if isinstance(processor_health, dict) else {"status": "unhealthy", "error": str(processor_health)},
+                "conversation_manager": conversation_health if isinstance(conversation_health, dict) else {"status": "unhealthy", "error": str(conversation_health)},
             }
         }
-        
+
         if any(dep.get("status") == "unhealthy" for dep in health_status["dependencies"].values()):
             health_status["status"] = "unhealthy"
             return jsonify(health_status), 503
-            
+        
         return jsonify(health_status), 200

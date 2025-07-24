@@ -3,8 +3,10 @@
 from .base import BaseModel, ConversationStatus, MessageType, PHONE_REGEX
 from . import db
 from sqlalchemy import Index, text, CheckConstraint
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import validates
 from typing import Dict, Any
+import uuid
 import logging
 
 logger = logging.getLogger(__name__)
@@ -35,7 +37,7 @@ class Conversation(BaseModel):
 class Message(BaseModel):
     __tablename__ = 'messages'
 
-    conversation_id = db.Column(db.PG_UUID(as_uuid=True), db.ForeignKey('conversations.id'), nullable=False, index=True)
+    conversation_id = db.Column(UUID(as_uuid=True), db.ForeignKey('conversations.id'), nullable=False, index=True, default=uuid.uuid4)
     whatsapp_message_id = db.Column(db.String(255), unique=True, nullable=True, index=True) # Added unique constraint
     message_type = db.Column(db.Enum(MessageType), nullable=False, index=True)
     content = db.Column(db.Text, nullable=False)

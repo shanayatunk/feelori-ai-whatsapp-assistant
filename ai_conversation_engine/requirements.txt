@@ -17,7 +17,7 @@ httpx
 tenacity
 google-generativeai
 redis
-Quart
+Quart>=0.18.0
 quart-cors
 hypercorn
 pytest
@@ -30,3 +30,6 @@ opentelemetry-sdk
 opentelemetry-exporter-otlp-proto-http
 hypothesis
 locust
+# Pydantic and related settings
+pydantic>=2.0.0,<3.0.0
+pydantic-settings>=2.0.0,<3.0.0

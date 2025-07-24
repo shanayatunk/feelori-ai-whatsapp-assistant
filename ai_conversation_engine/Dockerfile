@@ -15,9 +15,6 @@ COPY ./src /app/src
 # Copy the requirements file to the container
 COPY requirements.txt /app
 
-# Copy the Gunicorn configuration file to the container
-COPY gunicorn.conf.py /app
-
 # REMOVED: Do not copy the .env file into the image for security
 # COPY .env /app
 
@@ -42,5 +39,5 @@ EXPOSE 5001
 # Switch to the non-root user
 USER appuser
 
-# Define the command to run the application using a Gunicorn config file
-CMD ["gunicorn", "--config", "./gunicorn.conf.py", "src.main:app"]
+# Define the command to run the application using Hypercorn
+CMD ["hypercorn", "src.main:app", "--bind", "0.0.0.0:5001"]

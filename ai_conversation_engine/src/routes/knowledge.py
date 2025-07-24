@@ -2,7 +2,7 @@
 
 import logging
 from quart import Blueprint, jsonify, request
-from src.services.rate_limiter import RateLimiter
+from src.utils.rate_limiter import RateLimiter
 from src.config import settings
 
 logger = logging.getLogger(__name__)
