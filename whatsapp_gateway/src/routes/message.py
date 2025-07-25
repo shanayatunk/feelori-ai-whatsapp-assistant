@@ -3,9 +3,9 @@
 import logging
 import re
 import time
-from typing import Optional, Dict, Any, Tuple, Union
+from typing import Optional, Dict, Any, Tuple
 from flask import Blueprint, request, jsonify, g
-from sqlalchemy import func, and_, desc, text
+from sqlalchemy import func, desc, text
 from sqlalchemy.orm import selectinload
 from marshmallow import Schema, fields, validate, ValidationError, post_load
 from uuid import UUID
@@ -85,7 +85,6 @@ def db_transaction():
         raise
     finally:
         db.session.close()
-        # Session cleanup is handled by Flask-SQLAlchemy
 
 # --- Input Validation Schemas ---
 class SendMessageSchema(Schema):
@@ -98,7 +97,7 @@ class SendMessageSchema(Schema):
                 error="Message must be between {min} and {max} characters."
             ),
             validate.Regexp(
-                r'^[\s\S]*[^\s][\s\S]*$',  # Must contain at least one non-whitespace
+                r'^[\s\S]*[^\s][\s\S]*$',
                 error="Message cannot be only whitespace."
             )
         ]
@@ -207,7 +206,6 @@ def get_conversations():
         phone_filter = filters['phone_filter']
 
         # ** Optimized Query Using Window Functions **
-        # Create a subquery that gets the latest message for each conversation
         latest_messages_subquery = (
             db.session.query(
                 Message.conversation_id,
@@ -221,14 +219,12 @@ def get_conversations():
             ).subquery()
         )
 
-        # Filter to get only the latest message (rn = 1)
         latest_messages = (
             db.session.query(latest_messages_subquery)
             .filter(latest_messages_subquery.c.rn == 1)
             .subquery()
         )
 
-        # Main query with message count
         base_query = (
             db.session.query(
                 Conversation,
@@ -247,22 +243,17 @@ def get_conversations():
             )
         )
 
-        # Apply filters - phone filter validation already done in schema
         if status_filter:
             base_query = base_query.filter(Conversation.status == status_filter)
-
         if phone_filter:
-            # Phone validation already done in schema, safe to use
             base_query = base_query.filter(Conversation.customer_phone == phone_filter)
 
-        # Order and paginate
         conversations_paginated = (
             base_query
             .order_by(desc(latest_messages.c.last_timestamp))
             .paginate(page=page, per_page=per_page, error_out=False)
         )
 
-        # Build response
         result = []
         for row in conversations_paginated.items:
             conv, message_count, last_content, last_type, last_timestamp = row
@@ -307,9 +298,6 @@ def get_conversations():
     except sa.exc.SQLAlchemyError as e:
         logger_ctx.error("Database error fetching conversations", error=str(e), exc_info=True)
         return jsonify(build_error_response("Failed to fetch conversations", 500)[0]), 500
-    except ValueError as e:
-        logger_ctx.warning("Invalid input", error=str(e))
-        return jsonify(build_error_response(str(e), 400)[0]), 400
     except Exception as e:
         logger_ctx.error("Unexpected error fetching conversations", error=str(e), exc_info=True)
         return jsonify(build_error_response("Internal server error", 500)[0]), 500
@@ -326,7 +314,6 @@ def get_conversation_messages(conversation_id: UUID):
     )
 
     try:
-        # Validate query parameters
         schema = MessageFiltersSchema()
         try:
             filters = schema.load(request.args)
@@ -338,7 +325,6 @@ def get_conversation_messages(conversation_id: UUID):
         limit = filters['limit']
         message_type = filters['message_type']
 
-        # Verify conversation exists - use exists() for better performance
         conversation_exists = db.session.query(
             Conversation.query.filter_by(id=conversation_id).exists()
         ).scalar()
@@ -347,18 +333,12 @@ def get_conversation_messages(conversation_id: UUID):
             logger_ctx.warning("Conversation not found")
             return jsonify(build_error_response("Conversation not found", 404)[0]), 404
 
-        # Get conversation details for response
         conversation = db.session.query(Conversation).filter_by(id=conversation_id).first()
-
-        # Build message query
         query = Message.query.filter_by(conversation_id=conversation_id)
-
         if message_type:
             query = query.filter(Message.message_type == message_type)
-
         if cursor:
             try:
-                # Parse ISO format cursor with improved error handling
                 from datetime import datetime
                 cursor_time = datetime.fromisoformat(cursor.replace('Z', '+00:00'))
                 query = query.filter(Message.created_at < cursor_time)
@@ -366,9 +346,7 @@ def get_conversation_messages(conversation_id: UUID):
                 logger_ctx.warning("Invalid cursor format", cursor=cursor, error=str(e))
                 return jsonify(build_error_response("Invalid cursor format", 400)[0]), 400
 
-        # Get one extra to check if there are more
         messages = query.order_by(Message.created_at.desc()).limit(limit + 1).all()
-
         has_more = len(messages) > limit
         if has_more:
             messages = messages[:limit]
@@ -383,7 +361,6 @@ def get_conversation_messages(conversation_id: UUID):
         } for msg in messages]
 
         next_cursor = messages[-1].created_at.isoformat() if has_more and messages else None
-
         response_data = {
             'messages': messages_list,
             'next_cursor': next_cursor,
@@ -410,9 +387,6 @@ def get_conversation_messages(conversation_id: UUID):
     except sa.exc.SQLAlchemyError as e:
         logger_ctx.error("Database error fetching messages", error=str(e), exc_info=True)
         return jsonify(build_error_response("Failed to fetch messages", 500)[0]), 500
-    except ValueError as e:
-        logger_ctx.warning("Invalid input", error=str(e))
-        return jsonify(build_error_response(str(e), 400)[0]), 400
     except Exception as e:
         logger_ctx.error("Unexpected error fetching messages", error=str(e), exc_info=True)
         return jsonify(build_error_response("Internal server error", 500)[0]), 500
@@ -429,7 +403,6 @@ def send_message_to_conversation(conversation_id: UUID):
     )
 
     try:
-        # Validate input
         schema = SendMessageSchema()
         try:
             validated_data = schema.load(request.get_json() or {})
@@ -439,8 +412,6 @@ def send_message_to_conversation(conversation_id: UUID):
 
         message_content = validated_data['message']
         idempotency_key = request.headers.get('Idempotency-Key')
-
-        # Enhanced idempotency check
         if idempotency_key:
             existing_message = (
                 Message.query
@@ -466,13 +437,11 @@ def send_message_to_conversation(conversation_id: UUID):
                     'duplicate': True
                 }), 200
 
-        # Verify conversation exists and get details
         conversation = db.session.query(Conversation).filter_by(id=conversation_id).first()
         if not conversation:
             logger_ctx.warning("Conversation not found")
             return jsonify(build_error_response("Conversation not found", 404)[0]), 404
 
-        # Enhanced conversation status check
         valid_statuses = ['active', 'open']
         if conversation.status not in valid_statuses:
             logger_ctx.warning(
@@ -485,24 +454,19 @@ def send_message_to_conversation(conversation_id: UUID):
                 400
             )[0]), 400
 
-        # Validate phone number
         if not validate_phone_number(conversation.customer_phone):
             logger_ctx.error("Invalid phone number in conversation", phone=conversation.customer_phone)
             return jsonify(build_error_response("Invalid phone number in conversation", 500)[0]), 500
 
-        # Send message with proper transaction management
         try:
             with db_transaction() as session:
-                # Send via WhatsApp service first (fail fast approach)
                 response_message_id = whatsapp_service.send_message(
                     conversation.customer_phone,
                     message_content
                 )
-
                 if not response_message_id:
                     raise ValueError("WhatsApp service failed to return a message ID")
 
-                # Create message record
                 outgoing_message = Message(
                     conversation_id=conversation.id,
                     whatsapp_message_id=response_message_id,
@@ -511,13 +475,9 @@ def send_message_to_conversation(conversation_id: UUID):
                     status='sent'
                 )
                 session.add(outgoing_message)
-
-                # Update conversation timestamp
                 conversation.updated_at = func.now()
+                session.flush()
 
-                session.flush()  # Get the ID before commit
-
-                # Prepare response data
                 response_data = {
                     'success': True,
                     'message_id': response_message_id,
@@ -552,51 +512,6 @@ def send_message_to_conversation(conversation_id: UUID):
     except Exception as e:
         logger_ctx.error("Unexpected error sending message", error=str(e), exc_info=True)
         return jsonify(build_error_response("Internal server error", 500)[0]), 500
-
-@message_bp.route('/health', methods=['GET'])
-def health_check():
-    """Enhanced health check endpoint with detailed status."""
-    try:
-        health_status = {
-            'status': 'healthy',
-            'service': 'message_service',
-            'timestamp': time.time(),
-            'checks': {}
-        }
-        
-        # Test database connection with timeout
-        start_time = time.time()
-        db.session.execute(text('SELECT 1'))
-        db_response_time = round((time.time() - start_time) * 1000, 2)
-        
-        health_status['checks']['database'] = {
-            'status': 'healthy',
-            'response_time_ms': db_response_time
-        }
-        
-        # Test WhatsApp service if available
-        try:
-            if hasattr(whatsapp_service, 'health_check'):
-                service_health = whatsapp_service.health_check()
-                health_status['checks']['whatsapp_service'] = service_health
-        except Exception as e:
-            health_status['checks']['whatsapp_service'] = {
-                'status': 'degraded',
-                'error': str(e)
-            }
-            health_status['status'] = 'degraded'
-        
-        status_code = 200 if health_status['status'] == 'healthy' else 503
-        return jsonify(health_status), status_code
-        
-    except Exception as e:
-        logger.error("Health check failed", error=str(e))
-        return jsonify({
-            'status': 'unhealthy',
-            'service': 'message_service',
-            'error': str(e),
-            'timestamp': time.time()
-        }), 503
 
 # Error handlers
 @message_bp.errorhandler(MessageAPIError)

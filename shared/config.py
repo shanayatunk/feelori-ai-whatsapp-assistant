@@ -1,18 +1,52 @@
 # shared/config.py
+import os
+from pathlib import Path
 from pydantic_settings import BaseSettings
-from pydantic import Field, validator, SecretStr
+# MODIFIED: Import all necessary validators from Pydantic v2
+from pydantic import Field, SecretStr, model_validator, field_validator
 from typing import Optional, List
+
+def read_secret_file(file_path_env: str) -> Optional[str]:
+    """
+    Read secret from file path specified in environment variable.
+    Returns None if file doesn't exist or environment variable is not set.
+    """
+    file_path = os.getenv(file_path_env)
+    if not file_path:
+        return None
+    
+    try:
+        secret_file = Path(file_path)
+        if secret_file.exists():
+            return secret_file.read_text().strip()
+        else:
+            print(f"Warning: Secret file {file_path} does not exist")
+            return None
+    except Exception as e:
+        print(f"Error reading secret file {file_path}: {e}")
+        return None
 
 class Settings(BaseSettings):
     """Unified application configuration using Pydantic for all services."""
 
-    # --- AI-Specific Configuration (from ai_conversation_engine) ---
-    GEMINI_API_KEY: Optional[SecretStr] = Field(None, env="GEMINI_API_KEY")
-    OPENAI_API_KEY: Optional[SecretStr] = Field(None, env="OPENAI_API_KEY")
-    INTERNAL_API_KEY: SecretStr = Field(..., env="INTERNAL_API_KEY")
+    # --- Secrets loaded from Docker Secrets ---
+    GEMINI_API_KEY: Optional[SecretStr] = None
+    OPENAI_API_KEY: Optional[SecretStr] = None
+    INTERNAL_API_KEY: Optional[SecretStr] = None
+    DATABASE_URL: Optional[SecretStr] = None
+    WHATSAPP_ACCESS_TOKEN: Optional[SecretStr] = None
+    WHATSAPP_PHONE_NUMBER_ID: Optional[str] = None
+    WHATSAPP_VERIFY_TOKEN: Optional[SecretStr] = None
+    WHATSAPP_WEBHOOK_SECRET: Optional[SecretStr] = None
+    SHOPIFY_ACCESS_TOKEN: Optional[SecretStr] = None
+    REDIS_PASSWORD: Optional[SecretStr] = None
+    API_KEY: Optional[SecretStr] = None
+    SECRET_KEY: Optional[SecretStr] = None
+    
+    # --- Non-Secret Configuration ---
     ECOMMERCE_API_URL: str = Field(..., env="ECOMMERCE_API_URL")
-    ALLOWED_ORIGINS: str = Field("*", env="ALLOWED_ORIGINS")  # Standardized from CORS_ORIGINS
-    GEMINI_MODEL: str = Field("gemini-2.5-flash-lite", env="GEMINI_MODEL")
+    ALLOWED_ORIGINS: str = Field("*", env="ALLOWED_ORIGINS")
+    GEMINI_MODEL: str = Field("gemini-1.5-flash-latest", env="GEMINI_MODEL")
     EMBEDDING_MODEL: str = Field("text-embedding-004", env="EMBEDDING_MODEL")
     EMBEDDING_DIMENSION: int = Field(768, ge=128, le=2048)
     EMBEDDING_MAX_RETRIES: int = Field(3, ge=1)
@@ -30,8 +64,8 @@ class Settings(BaseSettings):
     LLM_RECOVERY_TIMEOUT: int = Field(60, ge=10)
     ECOMMERCE_FAILURE_THRESHOLD: int = Field(3, ge=1)
     ECOMMERCE_RECOVERY_TIMEOUT: int = Field(30, ge=10)
-    CIRCUIT_BREAKER_FAIL_MAX: int = Field(5, env="CIRCUIT_BREAKER_FAIL_MAX", description="Maximum failures before circuit breaker opens.")
-    CIRCUIT_BREAKER_RESET_TIMEOUT: int = Field(60, env="CIRCUIT_BREAKER_RESET_TIMEOUT", description="Time in seconds before the circuit breaker attempts to reset.") # <-- ADD THIS LINE
+    CIRCUIT_BREAKER_FAIL_MAX: int = Field(5, env="CIRCUIT_BREAKER_FAIL_MAX")
+    CIRCUIT_BREAKER_RESET_TIMEOUT: int = Field(60, env="CIRCUIT_BREAKER_RESET_TIMEOUT")
     RATE_LIMIT_REQUESTS: int = Field(100, ge=1)
     RATE_LIMIT_WINDOW: int = Field(60, ge=1)
     HTTP_MAX_CONNECTIONS: int = Field(100, ge=10)
@@ -39,150 +73,106 @@ class Settings(BaseSettings):
     REQUEST_TIMEOUT: float = Field(30.0, ge=1.0, le=120.0)
     REDIS_HOST: str = Field("redis", env="REDIS_HOST")
     REDIS_PORT: int = Field(6379, env="REDIS_PORT")
-    REDIS_PASSWORD: Optional[SecretStr] = Field(None, env="REDIS_PASSWORD")
     REDIS_SSL: bool = Field(False, env="REDIS_SSL")
-    REDIS_MAX_CONNECTIONS: int = Field(50, ge=10)
-    REDIS_URL: str = Field("redis://redis:6379/0", env="REDIS_URL")  # Shared Redis URL
+    REDIS_URL: Optional[str] = Field(None, env="REDIS_URL")
+    WHATSAPP_API_VERSION: str = Field("v17.0", env="WHATSAPP_API_VERSION")
+    WHATSAPP_API_BASE_URL: str = Field("https://graph.facebook.com", env="WHATSAPP_API_BASE_URL")
+    AI_SERVICE_TIMEOUT: int = Field(30, env="AI_SERVICE_TIMEOUT")
+    REDIS_MAX_CONNECTIONS: int = Field(10, env="REDIS_MAX_CONNECTIONS")
+    RATE_LIMIT_STORAGE_URL: Optional[str] = Field(None, env="RATE_LIMIT_STORAGE_URL")
+    DEFAULT_RATE_LIMIT: str = Field("200 per minute", env="DEFAULT_RATE_LIMIT")
+    WEBHOOK_RATE_LIMIT: str = Field("1000 per minute", env="WEBHOOK_RATE_LIMIT")
+    LOG_LEVEL: str = Field("INFO", env="LOG_LEVEL")
+    LOG_FORMAT: str = Field("json", env="LOG_FORMAT")
+    DEBUG: bool = Field(False, env="DEBUG")
+    TESTING: bool = Field(False, env="TESTING")
+    MAX_CONTENT_LENGTH: int = Field(1024 * 1024, env="MAX_CONTENT_LENGTH")
+    METRICS_ENABLED: bool = Field(True, env="METRICS_ENABLED")
+    HEALTH_CHECK_TIMEOUT: int = Field(5, env="HEALTH_CHECK_TIMEOUT")
+    SUPPORTED_MESSAGE_TYPES: List[str] = Field(default=["text", "image", "audio", "document"], env="SUPPORTED_MESSAGE_TYPES")
+    MESSAGE_RETRY_ATTEMPTS: int = Field(3, env="MESSAGE_RETRY_ATTEMPTS")
+    MESSAGE_RETRY_DELAY: int = Field(5, env="MESSAGE_RETRY_DELAY")
+    WEBHOOK_TIMEOUT: int = Field(10, env="WEBHOOK_TIMEOUT")
+    WEBHOOK_MAX_RETRIES: int = Field(3, env="WEBHOOK_MAX_RETRIES")
+    AI_SERVICE_URL: str = Field("http://ai-conversation-engine:5001", env="AI_SERVICE_URL")
+    SHOPIFY_STORE_URL: str = Field(..., env="SHOPIFY_STORE_URL")
+    
+    def __init__(self, **kwargs):
+        self._load_secrets_from_files()
+        super().__init__(**kwargs)
+    
+    def _load_secrets_from_files(self):
+        secret_mappings = {
+            'GEMINI_API_KEY_FILE': 'GEMINI_API_KEY',
+            'OPENAI_API_KEY_FILE': 'OPENAI_API_KEY',
+            'INTERNAL_API_KEY_FILE': 'INTERNAL_API_KEY',
+            'DATABASE_URL_FILE': 'DATABASE_URL',
+            'WHATSAPP_ACCESS_TOKEN_FILE': 'WHATSAPP_ACCESS_TOKEN',
+            'WHATSAPP_PHONE_NUMBER_ID_FILE': 'WHATSAPP_PHONE_NUMBER_ID',
+            'WHATSAPP_VERIFY_TOKEN_FILE': 'WHATSAPP_VERIFY_TOKEN',
+            'WHATSAPP_WEBHOOK_SECRET_FILE': 'WHATSAPP_WEBHOOK_SECRET',
+            'SHOPIFY_ACCESS_TOKEN_FILE': 'SHOPIFY_ACCESS_TOKEN',
+            'REDIS_PASSWORD_FILE': 'REDIS_PASSWORD',
+            'API_KEY_FILE': 'API_KEY',
+        }
+        for file_env, secret_env in secret_mappings.items():
+            secret_value = read_secret_file(file_env)
+            if secret_value:
+                os.environ[secret_env] = secret_value
+                print(f"✅ Loaded {secret_env} from secret file")
+            else:
+                print(f"⚠️  Could not load {secret_env} from {file_env}")
+        
+        if not os.getenv('SECRET_KEY') and os.getenv('INTERNAL_API_KEY'):
+            os.environ['SECRET_KEY'] = os.getenv('INTERNAL_API_KEY')
+            print("✅ Set SECRET_KEY from INTERNAL_API_KEY")
 
-    # --- WhatsApp-Specific Configuration (from whatsapp_gateway) ---
-    # FIXED: Updated DATABASE_URL to match docker-compose.yml postgres service
-    DATABASE_URL: str = Field(
-        default="postgresql://ai_assistant:ai_assistant_password@postgres:5432/ai_assistant",
-        env="DATABASE_URL",
-        description="PostgreSQL database connection URL"
-    )
-    WHATSAPP_ACCESS_TOKEN: SecretStr = Field(
-        ..., env="WHATSAPP_ACCESS_TOKEN",
-        description="WhatsApp Business API access token"
-    )
-    WHATSAPP_PHONE_NUMBER_ID: str = Field(
-        ..., env="WHATSAPP_PHONE_NUMBER_ID",
-        description="WhatsApp Business phone number ID"
-    )
-    WHATSAPP_VERIFY_TOKEN: str = Field(
-        default="your_verify_token_here", env="WHATSAPP_VERIFY_TOKEN",
-        description="WhatsApp webhook verification token"
-    )
-    WHATSAPP_WEBHOOK_SECRET: Optional[SecretStr] = Field(
-        default=None, env="WHATSAPP_WEBHOOK_SECRET",
-        description="WhatsApp webhook secret for signature verification"
-    )
-    WHATSAPP_API_VERSION: str = Field(
-        default="v17.0", env="WHATSAPP_API_VERSION",
-        description="WhatsApp Graph API version"
-    )
-    WHATSAPP_API_BASE_URL: str = Field(
-        default="https://graph.facebook.com", env="WHATSAPP_API_BASE_URL",
-        description="WhatsApp Graph API base URL"
-    )
-    AI_SERVICE_TIMEOUT: int = Field(
-        default=30, env="AI_SERVICE_TIMEOUT",
-        description="Timeout for AI service requests in seconds"
-    )
-    REDIS_MAX_CONNECTIONS: int = Field(  # Overlaps with AI, but consistent
-        default=10, env="REDIS_MAX_CONNECTIONS",
-        description="Maximum Redis connection pool size"
-    )
-    SECRET_KEY: SecretStr = Field(
-        default="your-secret-key-change-in-production", env="SECRET_KEY",
-        description="Flask secret key for session management"
-    )
-    API_KEY: Optional[SecretStr] = Field(
-        default=None, env="API_KEY",
-        description="API key for webhook authentication"
-    )
-    RATE_LIMIT_STORAGE_URL: Optional[str] = Field(
-        default=None, env="RATE_LIMIT_STORAGE_URL",
-        description="Storage backend for rate limiting (Redis URL)"
-    )
-    DEFAULT_RATE_LIMIT: str = Field(
-        default="200 per minute", env="DEFAULT_RATE_LIMIT",
-        description="Default rate limit for API endpoints"
-    )
-    WEBHOOK_RATE_LIMIT: str = Field(
-        default="1000 per minute", env="WEBHOOK_RATE_LIMIT",
-        description="Rate limit for webhook endpoints"
-    )
-    LOG_LEVEL: str = Field(
-        default="INFO", env="LOG_LEVEL",
-        description="Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)"
-    )
-    LOG_FORMAT: str = Field(
-        default="json", env="LOG_FORMAT",
-        description="Log format (json or text)"
-    )
-    DEBUG: bool = Field(
-        default=False, env="DEBUG",
-        description="Enable debug mode"
-    )
-    TESTING: bool = Field(
-        default=False, env="TESTING",
-        description="Enable testing mode"
-    )
-    MAX_CONTENT_LENGTH: int = Field(
-        default=1024 * 1024, env="MAX_CONTENT_LENGTH",  # 1MB
-        description="Maximum request content length in bytes"
-    )
-    METRICS_ENABLED: bool = Field(
-        default=True, env="METRICS_ENABLED",
-        description="Enable Prometheus metrics collection"
-    )
-    HEALTH_CHECK_TIMEOUT: int = Field(
-        default=5, env="HEALTH_CHECK_TIMEOUT",
-        description="Health check timeout in seconds"
-    )
-    SUPPORTED_MESSAGE_TYPES: List[str] = Field(
-        default=["text", "image", "audio", "document"], env="SUPPORTED_MESSAGE_TYPES",
-        description="List of supported WhatsApp message types"
-    )
-    MESSAGE_RETRY_ATTEMPTS: int = Field(
-        default=3, env="MESSAGE_RETRY_ATTEMPTS",
-        description="Number of retry attempts for failed message processing"
-    )
-    MESSAGE_RETRY_DELAY: int = Field(
-        default=5, env="MESSAGE_RETRY_DELAY",
-        description="Delay between retry attempts in seconds"
-    )
-    WEBHOOK_TIMEOUT: int = Field(
-        default=10, env="WEBHOOK_TIMEOUT",
-        description="Webhook processing timeout in seconds"
-    )
-    WEBHOOK_MAX_RETRIES: int = Field(
-        default=3, env="WEBHOOK_MAX_RETRIES",
-        description="Maximum webhook retry attempts"
-    )
+    # --- Validators (UPDATED FOR PYDANTIC V2) ---
 
-    # --- Shared/Overlapping Configuration ---
-    AI_SERVICE_URL: str = Field(
-        default="http://ai-conversation-engine:5000", env="AI_SERVICE_URL",
-        description="AI conversation engine service URL"
-    )
+    @model_validator(mode='after')
+    def build_redis_url(self) -> 'Settings':
+        """Construct the Redis connection URL after loading other values."""
+        if self.REDIS_URL:
+            return self
+        if self.REDIS_PASSWORD:
+            password = self.REDIS_PASSWORD.get_secret_value()
+            self.REDIS_URL = f"redis://:{password}@{self.REDIS_HOST}:{self.REDIS_PORT}/0"
+        else:
+            self.REDIS_URL = f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/0"
+        print("✅ Constructed REDIS_URL")
+        return self
 
-    # --- Validators (Merged from both) ---
-    @validator('ECOMMERCE_API_URL')
+    # MODIFIED: Replaced @validator with @field_validator
+    @field_validator('ECOMMERCE_API_URL')
+    @classmethod
     def validate_ecommerce_url(cls, v):
         if not v.startswith(('http://', 'https://')):
             raise ValueError('ECOMMERCE_API_URL must be a valid HTTP/HTTPS URL')
         return v
 
-    @validator('ALLOWED_ORIGINS')
+    # MODIFIED: Replaced @validator with @field_validator
+    @field_validator('ALLOWED_ORIGINS')
+    @classmethod
     def validate_allowed_origins(cls, v):
         if not v:
             raise ValueError("ALLOWED_ORIGINS cannot be empty. Use '*' for all or specify origins.")
         if v == "*":
             return v
-        # Split and clean up origins
         origins = [origin.strip() for origin in v.split(',') if origin.strip()]
         return ','.join(origins)
 
-    @validator('LOG_LEVEL')
+    # MODIFIED: Replaced @validator with @field_validator
+    @field_validator('LOG_LEVEL')
+    @classmethod
     def validate_log_level(cls, v):
         allowed_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
         if v.upper() not in allowed_levels:
             raise ValueError(f'LOG_LEVEL must be one of: {allowed_levels}')
         return v.upper()
 
-    @validator('SUPPORTED_MESSAGE_TYPES')
+    # MODIFIED: Replaced @validator with @field_validator
+    @field_validator('SUPPORTED_MESSAGE_TYPES')
+    @classmethod
     def validate_message_types(cls, v):
         allowed_types = ["text", "image", "audio", "video", "document", "location", "contacts"]
         for msg_type in v:
@@ -190,15 +180,36 @@ class Settings(BaseSettings):
                 raise ValueError(f'Unsupported message type: {msg_type}. Allowed: {allowed_types}')
         return v
 
+    def validate_required_secrets(self):
+        """Validate that required secrets are available."""
+        required_secrets = [
+            ('INTERNAL_API_KEY', self.INTERNAL_API_KEY),
+            ('DATABASE_URL', self.DATABASE_URL),
+            ('WHATSAPP_ACCESS_TOKEN', self.WHATSAPP_ACCESS_TOKEN),
+            ('WHATSAPP_PHONE_NUMBER_ID', self.WHATSAPP_PHONE_NUMBER_ID),
+            ('WHATSAPP_VERIFY_TOKEN', self.WHATSAPP_VERIFY_TOKEN),
+        ]
+        missing_secrets = [name for name, value in required_secrets if not value]
+        if missing_secrets:
+            raise ValueError(f"Missing required secrets: {', '.join(missing_secrets)}")
+
     def validate_ai_keys(self):
+        """Validate that at least one AI service key is available."""
         if not self.GEMINI_API_KEY and not self.OPENAI_API_KEY:
             raise ValueError("At least one AI service API key (GEMINI_API_KEY or OPENAI_API_KEY) must be provided.")
 
     class Config:
-        env_file = ".env"
-        env_file_encoding = 'utf-8'
         validate_assignment = True
-        case_sensitive = True  # From whatsapp
+        case_sensitive = True
+        env_file = None
 
-settings = Settings()
-settings.validate_ai_keys()
+# Create settings instance
+print("🔄 Initializing application settings...")
+try:
+    settings = Settings()
+    settings.validate_required_secrets()
+    settings.validate_ai_keys()
+    print("✅ Settings initialized successfully")
+except Exception as e:
+    print(f"❌ Failed to initialize settings: {e}")
+    raise

@@ -3,16 +3,26 @@ services:
     build:
       context: ./whatsapp_gateway
       dockerfile: Dockerfile
-    ports:
-      - "5000:5000"
-    env_file:
-      - ./.env
     environment:
       - FLASK_APP=src.main
       - ECOMMERCE_API_URL=http://ecommerce-integration:5002
       - AI_SERVICE_URL=http://ai-conversation-engine:5001
       - PYTHONPATH=/home/appuser
-      - DATABASE_URL=postgresql://ai_assistant:ai_assistant_password@postgres:5432/ai_assistant
+      - SHOPIFY_STORE_URL=https://feelori.myshopify.com
+      - DATABASE_URL_FILE=/run/secrets/database_url.txt
+      - WHATSAPP_ACCESS_TOKEN_FILE=/run/secrets/whatsapp_access_token.txt
+      - WHATSAPP_PHONE_NUMBER_ID_FILE=/run/secrets/whatsapp_phone_number_id.txt
+      - WHATSAPP_VERIFY_TOKEN_FILE=/run/secrets/whatsapp_verify_token.txt
+      - INTERNAL_API_KEY_FILE=/run/secrets/internal_api_key.txt
+      - GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key.txt
+      - OPENAI_API_KEY_FILE=/run/secrets/openai_api_key.txt
+      - WHATSAPP_WEBHOOK_SECRET_FILE=/run/secrets/webhook_secret.txt
+      - API_KEY_FILE=/run/secrets/api_key.txt
+      - REDIS_PASSWORD_FILE=/run/secrets/redis_password.txt
+    volumes: # MODIFIED: Use the absolute path to your secrets folder
+      - C:/Users/hp/Documents/feelori-secrets:/run/secrets:ro
+      - ./shared:/home/appuser/shared
+      - whatsapp_data:/home/appuser/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -27,9 +37,6 @@ services:
     restart: unless-stopped
     networks:
       - ai-assistant-network
-    volumes:
-      - ./shared:/home/appuser/shared
-      - whatsapp_data:/home/appuser/data
 
   celery-worker:
     build:
@@ -41,32 +48,44 @@ services:
         condition: service_started
       whatsapp-gateway:
         condition: service_healthy
-    env_file:
-      - ./.env
     environment:
+      - ECOMMERCE_API_URL=http://ecommerce-integration:5002
       - AI_SERVICE_URL=http://ai-conversation-engine:5001
       - PYTHONPATH=/home/appuser
-      - DATABASE_URL=postgresql://ai_assistant:ai_assistant_password@postgres:5432/ai_assistant
+      - SHOPIFY_STORE_URL=https://feelori.myshopify.com
+      - DATABASE_URL_FILE=/run/secrets/database_url.txt
+      - INTERNAL_API_KEY_FILE=/run/secrets/internal_api_key.txt
+      - GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key.txt
+      - OPENAI_API_KEY_FILE=/run/secrets/openai_api_key.txt
+      - WHATSAPP_ACCESS_TOKEN_FILE=/run/secrets/whatsapp_access_token.txt
+      - WHATSAPP_PHONE_NUMBER_ID_FILE=/run/secrets/whatsapp_phone_number_id.txt
+      - WHATSAPP_VERIFY_TOKEN_FILE=/run/secrets/whatsapp_verify_token.txt
+      - REDIS_PASSWORD_FILE=/run/secrets/redis_password.txt
+    volumes: # MODIFIED: Use the absolute path to your secrets folder
+      - C:/Users/hp/Documents/feelori-secrets:/run/secrets:ro
+      - ./shared:/home/appuser/shared
+      - whatsapp_data:/home/appuser/data
     restart: unless-stopped
     networks:
       - ai-assistant-network
-    volumes:
-      - ./shared:/home/appuser/shared
-      - whatsapp_data:/home/appuser/data
 
   ai-conversation-engine:
     build:
       context: ./ai_conversation_engine
       dockerfile: Dockerfile
-    ports:
-      - "5001:5001"
-    env_file:
-      - ./.env
     environment:
       - FLASK_APP=src.main
       - ECOMMERCE_API_URL=http://ecommerce-integration:5002
       - ALLOWED_ORIGINS=http://localhost:8080,http://127.0.0.1:8080
       - PYTHONPATH=/home/appuser
+      - GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key.txt
+      - OPENAI_API_KEY_FILE=/run/secrets/openai_api_key.txt
+      - INTERNAL_API_KEY_FILE=/run/secrets/internal_api_key.txt
+      - SHOPIFY_STORE_URL=https://feelori.myshopify.com
+    volumes: # MODIFIED: Use the absolute path to your secrets folder
+      - C:/Users/hp/Documents/feelori-secrets:/run/secrets:ro
+      - ./ai_conversation_engine:/home/appuser
+      - ./shared:/home/appuser/shared
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/ai/health"]
       interval: 30s
@@ -75,21 +94,19 @@ services:
     restart: unless-stopped
     networks:
       - ai-assistant-network
-    volumes:
-      - ./ai_conversation_engine:/home/appuser
-      - ./shared:/home/appuser/shared
 
   ecommerce-integration:
     build:
       context: ./ecommerce_integration
       dockerfile: Dockerfile
-    ports:
-      - "5002:5002"
-    env_file:
-      - ./.env
     environment:
       - FLASK_APP=src.main
       - PYTHONPATH=/home/appuser
+      - SHOPIFY_STORE_URL=https://feelori.myshopify.com
+      - SHOPIFY_ACCESS_TOKEN_FILE=/run/secrets/shopify_access_token.txt
+    volumes: # MODIFIED: Use the absolute path to your secrets folder
+      - C:/Users/hp/Documents/feelori-secrets:/run/secrets:ro
+      - ./ecommerce_integration:/home/appuser
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5002/ecommerce/health"]
       interval: 30s
@@ -98,24 +115,22 @@ services:
     restart: unless-stopped
     networks:
       - ai-assistant-network
-    volumes:
-      - ./ecommerce_integration:/home/appuser
 
   admin-dashboard:
     build:
       context: ./admin-dashboard
       dockerfile: Dockerfile
-    ports:
-      - "8080:80"
     restart: unless-stopped
     networks:
       - ai-assistant-network
 
   redis:
     image: redis:7-alpine
+    command: sh -c "exec redis-server --requirepass \"$$(cat /run/secrets/redis_password.txt)\""
     ports:
       - "6379:6379"
-    volumes:
+    volumes: # MODIFIED: Use the absolute path to your secrets folder
+      - C:/Users/hp/Documents/feelori-secrets:/run/secrets:ro
       - redis_data:/data
     restart: unless-stopped
     networks:
@@ -128,8 +143,9 @@ services:
     environment:
       - POSTGRES_DB=ai_assistant
       - POSTGRES_USER=ai_assistant
-      - POSTGRES_PASSWORD=ai_assistant_password
-    volumes:
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password.txt
+    volumes: # MODIFIED: Use the absolute path to your secrets folder
+      - C:/Users/hp/Documents/feelori-secrets:/run/secrets:ro
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "ai_assistant", "-d", "ai_assistant"]

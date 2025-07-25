@@ -15,7 +15,7 @@ import structlog
 # --- Core Application Imports ---
 from shared.config import settings
 from src.models.base import db
-from src.routes.webhook import webhook_bp, limiter  # <-- Import limiter from webhook
+from src.routes.webhook import webhook_bp, limiter
 from src.routes.message import message_bp
 from shared.exceptions import APIError
 from src.monitoring import (
@@ -24,6 +24,8 @@ from src.monitoring import (
     track_message,
     generate_latest
 )
+# --- ADD THIS IMPORT ---
+from shared.cache import redis_client
 
 # --- Initialize Logger ---
 structlog.configure(
@@ -46,7 +48,8 @@ def create_app():
     app = Flask(__name__)
 
     # --- Configuration ---
-    app.config['SQLALCHEMY_DATABASE_URI'] = settings.DATABASE_URL
+    # Ensure DATABASE_URL is a string, not a SecretStr object
+    app.config['SQLALCHEMY_DATABASE_URI'] = settings.DATABASE_URL.get_secret_value()
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = settings.SECRET_KEY.get_secret_value()
     app.config['DEBUG'] = settings.DEBUG
@@ -56,7 +59,6 @@ def create_app():
     db.init_app(app)
     Migrate(app, db)
     
-    # --- CORRECTED: Initialize Limiter with the app context ---
     limiter.init_app(app)
 
     # --- Register Blueprints ---
@@ -95,22 +97,36 @@ def create_app():
     # --- Core Routes ---
     @app.route('/api/health')
     def health_check():
-        """Provides a health check endpoint for monitoring."""
+        """Provides a comprehensive health check for monitoring."""
+        db_status = "unhealthy"
+        redis_status = "unhealthy"
+        
+        # Check Database Connection
         try:
-            # FIXED: Use text() for SQLAlchemy 2.0 compatibility
             from sqlalchemy import text
             db.session.execute(text('SELECT 1'))
             db_status = "healthy"
         except Exception as e:
             logger.error("Database health check failed", error=str(e))
-            db_status = "unhealthy"
+        
+        # Check Redis Connection
+        try:
+            redis_client.ping()
+            redis_status = "healthy"
+        except Exception as e:
+            logger.error("Redis health check failed", error=str(e))
+
+        is_healthy = db_status == "healthy" and redis_status == "healthy"
         
         health_data = {
-            "status": "healthy" if db_status == "healthy" else "unhealthy",
+            "status": "healthy" if is_healthy else "unhealthy",
             "service": "whatsapp_gateway",
-            "database": db_status
+            "dependencies": {
+                "database": db_status,
+                "redis": redis_status
+            }
         }
-        status_code = 200 if health_data["status"] == "healthy" else 503
+        status_code = 200 if is_healthy else 503
         return jsonify(health_data), status_code
 
     @app.route('/metrics')
@@ -151,6 +167,5 @@ signal.signal(signal.SIGTERM, shutdown_handler)
 signal.signal(signal.SIGINT, shutdown_handler)
 
 if __name__ == '__main__':
-    # FIXED: This block is for local development - use port 5000 to match Dockerfile
     logger.info("Starting Flask application in debug mode.")
     app.run(host='0.0.0.0', port=5000, debug=True)
