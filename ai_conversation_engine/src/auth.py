@@ -5,7 +5,7 @@ import secrets
 from functools import wraps
 from quart import request, jsonify
 
-from src.config import settings
+from shared.config import settings
 
 def validate_api_key(provided_key: str) -> bool:
     """✅ FIX: Constant-time comparison to prevent timing attacks."""

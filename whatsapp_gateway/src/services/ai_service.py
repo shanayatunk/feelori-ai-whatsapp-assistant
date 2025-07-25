@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any
 import structlog
 from pybreaker import CircuitBreaker
 
-from src.config import settings
+from shared.config import settings
 
 logger = structlog.get_logger(__name__)
 

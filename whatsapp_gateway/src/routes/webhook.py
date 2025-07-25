@@ -22,7 +22,7 @@ from redis.exceptions import RedisError
 from src.models import db
 from src.models.conversation import Conversation, Message
 from src.tasks import process_and_reply_task
-from src.cache import redis_client
+from shared.cache import redis_client
 
 import bleach
 import structlog
@@ -157,9 +157,9 @@ def get_rate_limit_key() -> str:
 limiter = Limiter(
     key_func=get_rate_limit_key,
     default_limits=DEFAULT_RATE_LIMITS,
-    storage_uri=os.getenv('REDIS_URL', 'redis://localhost:6379')
+    #storage_uri=os.getenv('REDIS_URL', 'redis://localhost:6379')
 )
-limiter.init_app(webhook_bp)
+
 
 # Enhanced signature verification
 def verify_webhook_signature(request_obj) -> bool:

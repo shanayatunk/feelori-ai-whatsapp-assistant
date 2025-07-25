@@ -3,7 +3,7 @@
 import logging
 from quart import Blueprint, jsonify, request
 from src.utils.rate_limiter import RateLimiter
-from src.config import settings
+from shared.config import settings
 
 logger = logging.getLogger(__name__)
 knowledge_bp = Blueprint('knowledge', __name__, url_prefix='/ai/v1')

@@ -9,8 +9,10 @@ services:
       - ./.env
     environment:
       - FLASK_APP=src.main
-      - ECOMMERCE_SERVICE_URL=http://ecommerce-integration:5002
+      - ECOMMERCE_API_URL=http://ecommerce-integration:5002
       - AI_SERVICE_URL=http://ai-conversation-engine:5001
+      - PYTHONPATH=/home/appuser
+      - DATABASE_URL=postgresql://ai_assistant:ai_assistant_password@postgres:5432/ai_assistant
     depends_on:
       postgres:
         condition: service_healthy
@@ -21,12 +23,13 @@ services:
       interval: 30s
       timeout: 10s
       retries: 10
+      start_period: 60s
     restart: unless-stopped
     networks:
       - ai-assistant-network
     volumes:
-      - ./whatsapp_gateway/migrations:/app/migrations
-      - whatsapp_data:/app/data
+      - ./shared:/home/appuser/shared
+      - whatsapp_data:/home/appuser/data
 
   celery-worker:
     build:
@@ -42,11 +45,14 @@ services:
       - ./.env
     environment:
       - AI_SERVICE_URL=http://ai-conversation-engine:5001
+      - PYTHONPATH=/home/appuser
+      - DATABASE_URL=postgresql://ai_assistant:ai_assistant_password@postgres:5432/ai_assistant
     restart: unless-stopped
     networks:
       - ai-assistant-network
     volumes:
-      - whatsapp_data:/app/data
+      - ./shared:/home/appuser/shared
+      - whatsapp_data:/home/appuser/data
 
   ai-conversation-engine:
     build:
@@ -58,10 +64,9 @@ services:
       - ./.env
     environment:
       - FLASK_APP=src.main
-      # --- ADDED THIS BLOCK ---
       - ECOMMERCE_API_URL=http://ecommerce-integration:5002
       - ALLOWED_ORIGINS=http://localhost:8080,http://127.0.0.1:8080
-      # ---------------------
+      - PYTHONPATH=/home/appuser
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/ai/health"]
       interval: 30s
@@ -70,6 +75,9 @@ services:
     restart: unless-stopped
     networks:
       - ai-assistant-network
+    volumes:
+      - ./ai_conversation_engine:/home/appuser
+      - ./shared:/home/appuser/shared
 
   ecommerce-integration:
     build:
@@ -81,6 +89,7 @@ services:
       - ./.env
     environment:
       - FLASK_APP=src.main
+      - PYTHONPATH=/home/appuser
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5002/ecommerce/health"]
       interval: 30s
@@ -89,6 +98,8 @@ services:
     restart: unless-stopped
     networks:
       - ai-assistant-network
+    volumes:
+      - ./ecommerce_integration:/home/appuser
 
   admin-dashboard:
     build:
@@ -111,7 +122,7 @@ services:
       - ai-assistant-network
 
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     ports:
       - "5432:5432"
     environment:
@@ -121,10 +132,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "ai_assistant"]
+      test: ["CMD", "pg_isready", "-U", "ai_assistant", "-d", "ai_assistant"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
     restart: unless-stopped
     networks:
       - ai-assistant-network

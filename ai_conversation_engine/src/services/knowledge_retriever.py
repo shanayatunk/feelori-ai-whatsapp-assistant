@@ -7,7 +7,7 @@ from pathlib import Path
 import json
 import hashlib
 from src.services.embedding_service import EmbeddingService
-from src.config import settings
+from shared.config import settings
 import os
 
 logger = logging.getLogger(__name__)

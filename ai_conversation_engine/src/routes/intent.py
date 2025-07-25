@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from src.auth import require_api_key
 from src.services.intent_analyzer import IntentResult
-from src.exceptions import AIServiceError
+from shared.exceptions import AIServiceError
 
 # --- Logging ---
 logger = logging.getLogger(__name__)

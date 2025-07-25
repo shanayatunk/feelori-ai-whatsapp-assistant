@@ -10,16 +10,14 @@ import logging
 from flask import Flask, g, request, jsonify, Response
 from flask_migrate import Migrate
 from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 import structlog
 
 # --- Core Application Imports ---
-from src.config import settings
+from shared.config import settings
 from src.models.base import db
-from src.routes.webhook import webhook_bp
+from src.routes.webhook import webhook_bp, limiter  # <-- Import limiter from webhook
 from src.routes.message import message_bp
-from src.exceptions import APIError
+from shared.exceptions import APIError
 from src.monitoring import (
     webhook_processing_time,
     error_counter,
@@ -28,7 +26,6 @@ from src.monitoring import (
 )
 
 # --- Initialize Logger ---
-# This setup is simplified assuming structlog is always available
 structlog.configure(
     processors=[
         structlog.processors.add_log_level,
@@ -45,30 +42,22 @@ logger = structlog.get_logger(__name__).bind(service="whatsapp_gateway")
 def create_app():
     """
     Create and configure the Flask application using the factory pattern.
-    
-    Returns:
-        Flask: A configured Flask application instance.
     """
     app = Flask(__name__)
 
     # --- Configuration ---
     app.config['SQLALCHEMY_DATABASE_URI'] = settings.DATABASE_URL
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SECRET_KEY'] = settings.SECRET_KEY
+    app.config['SECRET_KEY'] = settings.SECRET_KEY.get_secret_value()
     app.config['DEBUG'] = settings.DEBUG
 
     # --- Initialize Extensions ---
-    CORS(app, origins=settings.CORS_ORIGINS.split(','))
+    CORS(app, origins=settings.ALLOWED_ORIGINS.split(','))
     db.init_app(app)
     Migrate(app, db)
     
-    # Initialize Rate Limiter
-    limiter = Limiter(
-        app,
-        key_func=get_remote_address,
-        default_limits=[settings.DEFAULT_RATE_LIMIT],
-        storage_uri=settings.REDIS_URL
-    )
+    # --- CORRECTED: Initialize Limiter with the app context ---
+    limiter.init_app(app)
 
     # --- Register Blueprints ---
     app.register_blueprint(webhook_bp, url_prefix='/api')
@@ -108,7 +97,9 @@ def create_app():
     def health_check():
         """Provides a health check endpoint for monitoring."""
         try:
-            db.engine.execute('SELECT 1')
+            # FIXED: Use text() for SQLAlchemy 2.0 compatibility
+            from sqlalchemy import text
+            db.session.execute(text('SELECT 1'))
             db_status = "healthy"
         except Exception as e:
             logger.error("Database health check failed", error=str(e))
@@ -160,6 +151,6 @@ signal.signal(signal.SIGTERM, shutdown_handler)
 signal.signal(signal.SIGINT, shutdown_handler)
 
 if __name__ == '__main__':
-    # This block is for local development, not for production
+    # FIXED: This block is for local development - use port 5000 to match Dockerfile
     logger.info("Starting Flask application in debug mode.")
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

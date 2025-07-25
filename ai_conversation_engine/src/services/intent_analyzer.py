@@ -21,6 +21,7 @@ class IntentType(Enum):
     PRICE_INQUIRY = "price_inquiry"
     AVAILABILITY_CHECK = "availability_check"
     GOODBYE = "goodbye"
+    KNOWLEDGE_BASE_QUERY = "knowledge_base_query"  # <-- THIS IS THE CORRECTED LINE
     FALLBACK = "fallback"
 
 @dataclass
@@ -42,47 +43,47 @@ class IntentAnalyzer:
         self.intent_patterns = {
             IntentType.GREETING: {
                 "keywords": ["hello", "hi", "hey", "greetings", "good morning", 
-                           "good afternoon", "good evening", "howdy", "sup"],
+                             "good afternoon", "good evening", "howdy", "sup"],
                 "weight": 1.0
             },
             IntentType.PRODUCT_QUERY: {
                 "keywords": ["find", "search", "product", "show me", "looking for", 
-                           "need", "want", "buy", "purchase", "get me"],
+                             "need", "want", "buy", "purchase", "get me"],
                 "weight": 1.2
             },
             IntentType.PRODUCT_DETAILS_FOLLOWUP: {
                 "keywords": ["details", "more info", "tell me about", "specifications", 
-                           "features", "description", "explain", "what is"],
+                             "features", "description", "explain", "what is"],
                 "weight": 1.1
             },
             IntentType.ORDER_STATUS: {
                 "keywords": ["order status", "track order", "where is my order", 
-                           "delivery status", "shipment", "tracking", "order update"],
+                             "delivery status", "shipment", "tracking", "order update"],
                 "weight": 1.3
             },
             IntentType.COMPLAINT: {
                 "keywords": ["complaint", "problem", "issue", "wrong", "broken", 
-                           "defective", "not working", "disappointed", "unhappy"],
+                             "defective", "not working", "disappointed", "unhappy"],
                 "weight": 1.2
             },
             IntentType.SUPPORT_REQUEST: {
                 "keywords": ["help", "support", "assistance", "how to", "can you help", 
-                           "need help", "guide me", "tutorial"],
+                             "need help", "guide me", "tutorial"],
                 "weight": 1.0
             },
             IntentType.PRICE_INQUIRY: {
                 "keywords": ["price", "cost", "how much", "expensive", "cheap", 
-                           "discount", "offer", "deal", "rate"],
+                             "discount", "offer", "deal", "rate"],
                 "weight": 1.1
             },
             IntentType.AVAILABILITY_CHECK: {
                 "keywords": ["available", "in stock", "out of stock", "when available", 
-                           "do you have", "is it available"],
+                             "do you have", "is it available"],
                 "weight": 1.1
             },
             IntentType.GOODBYE: {
                 "keywords": ["goodbye", "bye", "see you", "thanks", "thank you", 
-                           "that's all", "done", "exit"],
+                             "that's all", "done", "exit"],
                 "weight": 1.0
             }
         }
@@ -140,7 +141,7 @@ class IntentAnalyzer:
         )
         
         logger.debug(f"Intent analysis for '{message[:50]}...': {final_result.intent.value} "
-                    f"(confidence: {final_result.confidence:.2f})")
+                     f"(confidence: {final_result.confidence:.2f})")
         
         return final_result
 

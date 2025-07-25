@@ -84,6 +84,7 @@ def db_transaction():
         logger.error("Database transaction rolled back", error=str(e))
         raise
     finally:
+        db.session.close()
         # Session cleanup is handled by Flask-SQLAlchemy
 
 # --- Input Validation Schemas ---

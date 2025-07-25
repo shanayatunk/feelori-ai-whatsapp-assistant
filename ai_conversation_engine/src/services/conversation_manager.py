@@ -8,8 +8,7 @@ import asyncio
 from typing import List, Dict, Optional, Any
 from collections import OrderedDict
 from contextlib import asynccontextmanager
-
-from src.config import Settings
+from shared.config import Settings
 
 logger = logging.getLogger(__name__)
 

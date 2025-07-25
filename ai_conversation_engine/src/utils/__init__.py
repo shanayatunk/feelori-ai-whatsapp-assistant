@@ -7,7 +7,7 @@ This package contains reusable utility classes and functions that support
 the main application services.
 """
 
-from .cache import CacheManager, CacheBackend, CacheError, cache_get, cache_set, cache_delete
+from shared.cache import CacheManager, CacheBackend, CacheError, cache_get, cache_set, cache_delete
 from .rate_limiter import RateLimiter, RateLimiterError
 
 __all__ = [

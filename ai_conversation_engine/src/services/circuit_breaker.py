@@ -12,7 +12,7 @@ from prometheus_client import Counter, Histogram, Gauge
 import threading
 
 # Import the centralized exception
-from src.exceptions import CircuitBreakerError
+from shared.exceptions import CircuitBreakerError
 
 logger = logging.getLogger(__name__)
 

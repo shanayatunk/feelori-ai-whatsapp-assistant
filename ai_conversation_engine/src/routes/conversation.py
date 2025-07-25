@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field, ValidationError
 
 # --- Local Imports ---
 from src.auth import require_api_key
-from src.config import settings
-from src.exceptions import CircuitBreakerOpenError
+from shared.config import settings
+from shared.exceptions import CircuitBreakerOpenError
 from src.utils.rate_limiter import RateLimiter
 from src.services.sanitizer import InputSanitizer
 

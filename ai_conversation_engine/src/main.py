@@ -14,7 +14,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
-from src.config import settings
+from shared.config import settings
 from src.routes.conversation import conversation_bp
 from src.routes.intent import intent_bp
 from src.routes.knowledge import knowledge_bp
@@ -117,57 +117,63 @@ INTENT_COUNT = get_or_create_metric(
     ['intent', 'status']
 )
 
-@asynccontextmanager
-async def lifespan(app: Quart):
-    """
-    Manages application startup and shutdown, initializing and closing resources.
-    """
-    logger.info("Application startup...")
-    try:
-        http_client = httpx.AsyncClient(
-            timeout=settings.REQUEST_TIMEOUT,
-            limits=httpx.Limits(
-                max_keepalive_connections=settings.HTTP_MAX_KEEPALIVE,
-                max_connections=settings.HTTP_MAX_CONNECTIONS
-            )
-        )
-        conversation_manager = ConversationManager(settings=settings)
-        ai_processor = AsyncAIProcessor(
-            http_client=http_client,
-            settings=settings,
-            conversation_manager=conversation_manager
-        )
-        knowledge_retriever = KnowledgeRetriever(http_client=http_client, settings=settings)
-        await knowledge_retriever.initialize()
-
-        app.http_client = http_client
-        app.ai_processor = ai_processor
-        app.conversation_manager = conversation_manager
-        app.knowledge_retriever = knowledge_retriever
-
-        logger.info("Application startup completed successfully")
-
-    except Exception as e:
-        logger.error(f"Error during application startup: {e}")
-        raise
-
-    yield
-
-    logger.info("Application shutting down...")
-    try:
-        if hasattr(app, 'http_client') and app.http_client:
-            await app.http_client.aclose()
-        logger.info("Application shutdown completed successfully")
-    except Exception as e:
-        logger.error(f"Error during application shutdown: {e}")
-
 def create_app():
     """
     Creates and configures the Quart application.
     """
-    app = Quart(__name__, lifespan=lifespan)
+    # Create Quart app without lifespan parameter
+    app = Quart(__name__)
     app = cors(app, allow_origin=settings.ALLOWED_ORIGINS.split(','))
     logger.info(f"CORS enabled for origins: {settings.ALLOWED_ORIGINS.split(',')}")
+
+    @app.before_serving
+    async def startup():
+        """
+        Application startup - initializes resources.
+        This replaces the lifespan startup logic.
+        """
+        logger.info("Application startup...")
+        try:
+            http_client = httpx.AsyncClient(
+                timeout=settings.REQUEST_TIMEOUT,
+                limits=httpx.Limits(
+                    max_keepalive_connections=settings.HTTP_MAX_KEEPALIVE,
+                    max_connections=settings.HTTP_MAX_CONNECTIONS
+                )
+            )
+            conversation_manager = ConversationManager(settings=settings)
+            ai_processor = AsyncAIProcessor(
+                http_client=http_client,
+                settings=settings,
+                conversation_manager=conversation_manager
+            )
+            knowledge_retriever = KnowledgeRetriever(http_client=http_client, app_settings=settings)
+            await knowledge_retriever.initialize()
+
+            app.http_client = http_client
+            app.ai_processor = ai_processor
+            app.conversation_manager = conversation_manager
+            app.knowledge_retriever = knowledge_retriever
+
+            logger.info("Application startup completed successfully")
+
+        except Exception as e:
+            logger.error(f"Error during application startup: {e}")
+            raise
+
+    @app.after_serving
+    async def shutdown():
+        """
+        Application shutdown - cleans up resources.
+        This replaces the lifespan shutdown logic.
+        """
+        logger.info("Application shutting down...")
+        try:
+            if hasattr(app, 'http_client') and app.http_client:
+                await app.http_client.aclose()
+            logger.info("Application shutdown completed successfully")
+        except Exception as e:
+            logger.error(f"Error during application shutdown: {e}")
 
     @app.before_request
     def before_request_handler():

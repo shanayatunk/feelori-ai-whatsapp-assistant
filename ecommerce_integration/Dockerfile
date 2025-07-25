@@ -33,7 +33,7 @@ RUN chown -R appuser:appuser /app
 ENV FLASK_APP=src.main
 
 # Set the Python path environment variable
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app/shared:/app/src
 
 # Make port 5002 available to the world outside this container
 EXPOSE 5002

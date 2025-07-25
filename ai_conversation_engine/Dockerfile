@@ -28,7 +28,7 @@ RUN useradd -m -u 1000 appuser
 RUN chown -R appuser:appuser /app
 
 # Set the Python path environment variable
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app/shared:/app/src
 
 # Set the Flask application entry point
 ENV FLASK_APP=src.main

@@ -4,7 +4,7 @@ import logging
 import asyncio
 from typing import List, Optional, Union
 from dataclasses import dataclass
-from src.config import settings
+from shared.config import settings
 
 logger = logging.getLogger(__name__)
 

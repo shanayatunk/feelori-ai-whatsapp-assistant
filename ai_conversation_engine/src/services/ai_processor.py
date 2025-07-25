@@ -1,4 +1,5 @@
 # ai_conversation_engine/src/services/ai_processor.py
+
 import asyncio
 import httpx
 import structlog
@@ -12,16 +13,18 @@ from prometheus_client import Counter, Histogram, Gauge
 from contextlib import asynccontextmanager
 from tenacity import retry, wait_exponential, stop_after_attempt
 
-from src.config import settings
+from shared.config import Settings  # Corrected import for type hint
 from pydantic import ValidationError
-from src.exceptions import AIServiceError, CircuitBreakerOpenError
+from shared.exceptions import AIServiceError, CircuitBreakerOpenError
 from src.services.conversation_manager import ConversationManager
-from src.services.circuit_breaker import CircuitBreaker
+# --- THIS IMPORT HAS BEEN CORRECTED ---
+from src.services.circuit_breaker import CircuitBreaker, CircuitBreakerConfig
+# ------------------------------------
 from src.services.sanitizer import InputSanitizer
 from src.services.intent_analyzer import IntentAnalyzer, IntentType
 from src.services.knowledge_retriever import KnowledgeRetriever
 from src.utils.rate_limiter import RateLimiter
-from src.utils.cache import CacheManager
+from shared.cache import CacheManager
 
 logger = structlog.get_logger(__name__)
 
@@ -56,14 +59,14 @@ class AsyncAIProcessor:
 
     def __init__(
         self,
+        settings: Settings,
         http_client: httpx.AsyncClient,
-        app_settings: "Settings",
         conversation_manager: ConversationManager,
         cache_manager: Optional[CacheManager] = None,
         rate_limiter: Optional[RateLimiter] = None
     ):
         """Initializes the AI processor with enhanced dependencies."""
-        self.settings = app_settings
+        self.settings = settings
         self.http_client = http_client
         self.conversation_manager = conversation_manager
         self.cache_manager = cache_manager or CacheManager()
@@ -79,17 +82,23 @@ class AsyncAIProcessor:
             "x-goog-api-key": self.settings.GEMINI_API_KEY
         }
 
-        # Circuit Breakers
+        # --- THIS SECTION HAS BEEN CORRECTED ---
+        # Circuit Breakers are now created using the CircuitBreakerConfig object
         self.llm_circuit_breaker = CircuitBreaker(
-            failure_threshold=self.settings.LLM_FAILURE_THRESHOLD,
-            recovery_timeout=self.settings.LLM_RECOVERY_TIMEOUT,
-            name="LLM"
+            CircuitBreakerConfig(
+                failure_threshold=self.settings.LLM_FAILURE_THRESHOLD,
+                recovery_timeout=self.settings.LLM_RECOVERY_TIMEOUT,
+                name="LLM"
+            )
         )
         self.ecommerce_circuit_breaker = CircuitBreaker(
-            failure_threshold=self.settings.ECOMMERCE_FAILURE_THRESHOLD,
-            recovery_timeout=self.settings.ECOMMERCE_RECOVERY_TIMEOUT,
-            name="ECommerce"
+            CircuitBreakerConfig(
+                failure_threshold=self.settings.ECOMMERCE_FAILURE_THRESHOLD,
+                recovery_timeout=self.settings.ECOMMERCE_RECOVERY_TIMEOUT,
+                name="ECommerce"
+            )
         )
+        # -----------------------------------------
 
         # Services
         self.intent_analyzer = IntentAnalyzer()
@@ -143,8 +152,8 @@ class AsyncAIProcessor:
             "status": "healthy" if kr_health['status'] == 'healthy' else 'unhealthy',
             "dependencies": {
                 "knowledge_retriever": kr_health,
-                "llm_circuit_breaker": self.llm_circuit_breaker.get_status(),
-                "ecommerce_circuit_breaker": self.ecommerce_circuit_breaker.get_status()
+                "llm_circuit_breaker": self.llm_circuit_breaker.get_stats(),
+                "ecommerce_circuit_breaker": self.ecommerce_circuit_breaker.get_stats()
             }
         }
 
@@ -316,6 +325,8 @@ class ProductQueryHandler(MessageHandler):
 
 class ProductDetailsHandler(MessageHandler):
     # Simplified for brevity; would be similar to ProductQueryHandler
+    def __init__(self, processor: 'AsyncAIProcessor'):
+        self.processor = processor
     async def handle(self, message: str, context: Dict[str, Any]) -> str:
         return "This is where I would provide more details about a specific product."
 

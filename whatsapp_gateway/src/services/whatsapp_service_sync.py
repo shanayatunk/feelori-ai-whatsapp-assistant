@@ -1,7 +1,6 @@
 # src/services/whatsapp_service_sync.py
 
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 import structlog
 
@@ -13,54 +12,49 @@ class WhatsAppService:
     """
     A synchronous wrapper for the AsyncWhatsAppService.
     
-    This class provides a synchronous interface for sending messages, correctly
-    managing the async event loop in a separate thread to avoid blocking.
+    This class provides a synchronous interface that correctly handles calling
+    async functions without creating a conflicting, long-running event loop.
     """
     def __init__(self):
         self.async_service = async_whatsapp_service
-        try:
-            self._loop = asyncio.get_running_loop()
-        except RuntimeError:
-            self._loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self._loop)
-        
-        self._executor = ThreadPoolExecutor(max_workers=1)
-
-        # Run the event loop in a separate thread
-        self._executor.submit(self._loop.run_forever)
-
-        logger.info("Sync WhatsApp Service initialized with a dedicated event loop.")
-
-    def _run_async(self, coro):
-        """Submits a coroutine to the running event loop and waits for the result."""
-        future = asyncio.run_coroutine_threadsafe(coro, self._loop)
-        return future.result()
+        logger.info("Sync WhatsApp Service initialized.")
 
     def send_message(self, to: str, message: str) -> Optional[str]:
         """
-        Sends a WhatsApp message synchronously.
+        Sends a WhatsApp message synchronously by running the async version
+        in a new, temporary event loop.
 
         Returns:
             The message ID if successful, otherwise None.
         """
         log = logger.bind(recipient=to)
         try:
-            log.info("Dispatching synchronous send_message to event loop.")
-            message_id = self._run_async(self.async_service.send_message(to, message))
+            log.info("Dispatching synchronous send_message to a new event loop.")
+            # asyncio.run() creates a new event loop, runs the task, and closes it.
+            # This prevents conflict with the main Hypercorn event loop.
+            message_id = asyncio.run(self.async_service.send_message(to, message))
             return message_id
         except WhatsAppError as e:
             log.error("Failed to send WhatsApp message (sync wrapper)", error=str(e))
             return None
         except Exception as e:
+            # This can happen if Hypercorn's loop is already running, which is fine.
+            # We are simply wrapping the async call.
             log.error("An unexpected error occurred in the sync wrapper", error=str(e))
             return None
 
     def shutdown(self):
-        """Gracefully shuts down the event loop and thread pool."""
-        if self._loop.is_running():
-            self._loop.call_soon_threadsafe(self._loop.stop)
-        self._executor.shutdown(wait=True)
-        logger.info("Sync WhatsApp Service event loop has been shut down.")
+        """
+        A shutdown method for compatibility. In this new version,
+        there's no persistent loop to close, but we can close the underlying
+        async client's session.
+        """
+        try:
+            asyncio.run(self.async_service.close())
+            logger.info("Sync WhatsApp Service underlying async client has been shut down.")
+        except Exception as e:
+            logger.error("Error during sync shutdown", error=str(e))
+
 
 # Instantiate a reusable synchronous service
 whatsapp_service = WhatsAppService()
