@@ -14,6 +14,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
+
 from shared.config import settings
 from src.routes.conversation import conversation_bp
 from src.routes.intent import intent_bp
@@ -23,10 +24,18 @@ from src.services.conversation_manager import ConversationManager
 from src.services.knowledge_retriever import KnowledgeRetriever
 from src.auth import require_api_key
 
+# (Your OpenTelemetry, Logging, and Prometheus setup remains the same...)
 # --- OpenTelemetry Setup ---
 trace.set_tracer_provider(TracerProvider())
 tracer = trace.get_tracer(__name__)
-span_processor = BatchSpanProcessor(OTLPSpanExporter())
+
+# Use the environment variable for the OTLP endpoint
+otlp_exporter = OTLPSpanExporter(
+    endpoint=settings.OTEL_EXPORTER_OTLP_ENDPOINT,
+)
+
+# Pass the configured exporter to the span processor
+span_processor = BatchSpanProcessor(otlp_exporter)
 trace.get_tracer_provider().add_span_processor(span_processor)
 
 # --- Logging Setup ---
@@ -43,10 +52,6 @@ structlog.configure(
 )
 
 class CorrelationIDFilter(logging.Filter):
-    """
-    Logging filter to add correlation ID to log records.
-    Handles cases when not within a request context.
-    """
     def filter(self, record):
         if has_request_context():
             record.correlation_id = getattr(request, 'correlation_id', 'N/A')
@@ -66,21 +71,14 @@ root_logger.setLevel(logging.INFO)
 logger = structlog.get_logger()
 
 # --- PROMETHEUS FIX: Use Custom Registry ---
-# Create a custom registry to avoid conflicts with global registry
 CUSTOM_REGISTRY = CollectorRegistry()
 
 def get_or_create_metric(metric_class, name, description, labels=None, registry=None):
-    """
-    Safely get or create a Prometheus metric to avoid duplicate registration errors.
-    """
     registry = registry or CUSTOM_REGISTRY
-    
-    # Check if metric already exists
     for metric in registry._collector_to_names.keys():
         if hasattr(metric, '_name') and metric._name == name:
             logger.info(f"Reusing existing metric: {name}")
             return metric
-    
     try:
         if labels:
             return metric_class(name, description, labels, registry=registry)
@@ -89,49 +87,34 @@ def get_or_create_metric(metric_class, name, description, labels=None, registry=
     except ValueError as e:
         if "Duplicated timeseries" in str(e):
             logger.warning(f"Metric {name} already exists, retrieving existing instance")
-            # Find and return existing metric
             for metric in registry._collector_to_names.keys():
                 if hasattr(metric, '_name') and metric._name == name:
                     return metric
         raise e
 
-# Initialize metrics using custom registry
 REQUEST_COUNT = get_or_create_metric(
-    Counter,
-    'ai_requests_total',
-    'Total requests processed',
-    ['endpoint', 'http_status']
+    Counter, 'ai_requests_total', 'Total requests processed', ['endpoint', 'http_status']
 )
-
 REQUEST_DURATION = get_or_create_metric(
-    Histogram,
-    'ai_request_duration_seconds',
-    'Request duration in seconds',
-    ['endpoint']
+    Histogram, 'ai_request_duration_seconds', 'Request duration in seconds', ['endpoint']
+)
+INTENT_COUNT = get_or_create_metric(
+    Counter, 'ai_intent_total', 'Total intents processed', ['intent', 'status']
 )
 
-INTENT_COUNT = get_or_create_metric(
-    Counter,
-    'ai_intent_total',
-    'Total intents processed',
-    ['intent', 'status']
-)
 
 def create_app():
     """
     Creates and configures the Quart application.
     """
-    # Create Quart app without lifespan parameter
     app = Quart(__name__)
     app = cors(app, allow_origin=settings.ALLOWED_ORIGINS.split(','))
     logger.info(f"CORS enabled for origins: {settings.ALLOWED_ORIGINS.split(',')}")
 
+
+
     @app.before_serving
     async def startup():
-        """
-        Application startup - initializes resources.
-        This replaces the lifespan startup logic.
-        """
         logger.info("Application startup...")
         try:
             http_client = httpx.AsyncClient(
@@ -163,10 +146,6 @@ def create_app():
 
     @app.after_serving
     async def shutdown():
-        """
-        Application shutdown - cleans up resources.
-        This replaces the lifespan shutdown logic.
-        """
         logger.info("Application shutting down...")
         try:
             if hasattr(app, 'http_client') and app.http_client:
@@ -177,15 +156,11 @@ def create_app():
 
     @app.before_request
     def before_request_handler():
-        """Sets up request metadata before processing."""
         request.start_time = time.time()
         request.correlation_id = str(uuid.uuid4())
 
     @app.after_request
     async def after_request_handler(response):
-        """
-        Records metrics after each request.
-        """
         try:
             endpoint = request.path
             status_code = response.status_code
@@ -198,13 +173,11 @@ def create_app():
 
     @app.route('/health')
     async def health_check():
-        """Health check endpoint."""
         return {"status": "healthy", "timestamp": time.time()}
 
     @app.route('/metrics')
     @require_api_key
     async def metrics():
-        """Exposes Prometheus metrics using custom registry."""
         try:
             return Response(generate_latest(CUSTOM_REGISTRY), mimetype='text/plain')
         except Exception as e:
@@ -213,13 +186,11 @@ def create_app():
 
     @app.errorhandler(500)
     async def internal_server_error(error):
-        """Handle internal server errors."""
         logger.error(f"Internal server error: {error}")
         return {"error": "Internal server error"}, 500
 
     @app.errorhandler(404)
     async def not_found(error):
-        """Handle not found errors."""
         return {"error": "Endpoint not found"}, 404
 
     # Register blueprints

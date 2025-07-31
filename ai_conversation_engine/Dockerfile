@@ -15,11 +15,9 @@ COPY ./src /app/src
 # Copy the requirements file to the container
 COPY requirements.txt /app
 
-# REMOVED: Do not copy the .env file into the image for security
-# COPY .env /app
-
 # Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# MODIFIED: Added --retries and --default-timeout to make the installation more resilient to network issues.
+RUN pip install --no-cache-dir --timeout=600 --retries 10 --default-timeout 100 -r requirements.txt
 
 # Create a non-root user for security
 RUN useradd -m -u 1000 appuser
@@ -38,6 +36,10 @@ EXPOSE 5001
 
 # Switch to the non-root user
 USER appuser
+
+# Add Docker HEALTHCHECK instruction
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD curl --fail http://localhost:5001/health || exit 1
 
 # Define the command to run the application using Hypercorn
 CMD ["hypercorn", "src.main:app", "--bind", "0.0.0.0:5001"]

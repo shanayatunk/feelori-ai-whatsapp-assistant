@@ -32,7 +32,7 @@ class EmbeddingService:
         self.dimension = self.settings.EMBEDDING_DIMENSION
         self._request_headers = {
             "Content-Type": "application/json",
-            "x-goog-api-key": self.api_key # Correct header for API Key
+            "x-goog-api-key": self.api_key.get_secret_value()
         }
 
         # Rate limiting and retry configuration

@@ -1,63 +1,68 @@
 #!/bin/sh
 
-# Set the correct path to the Python executable in the venv
-VENV_PYTHON="/home/appuser/venv/bin/python"
+# This script waits for the database to be ready and then executes
+# the main command for the service (e.g., starting the web server or celery worker).
+# It no longer handles database migrations.
 
-echo "--- Starting WhatsApp Gateway Service ---"
+set -e # Exit immediately if a command exits with a non-zero status.
 
-# Debug: Show which secret files are mounted
-echo "--- Checking Docker secrets ---"
-if [ -d "/run/secrets" ]; then
-    echo "Available secrets:"
-    ls -la /run/secrets/
+VENV_PYTHON="/opt/venv/bin/python"
+
+# The first argument to the script can be 'wait-for-db-only'
+# This allows a container (like the migrations service) to use this script
+# just for the wait logic, without starting a long-running process.
+if [ "$1" = 'wait-for-db-only' ]; then
+    # Shift the arguments, so the main exec "$@" at the end doesn't re-run this.
+    shift
 else
-    echo "❌ No /run/secrets directory found"
+    echo "--- Starting Service ---"
 fi
 
 # Wait for the database to be ready
 echo "--- Waiting for database to be ready ---"
 max_attempts=30
-attempt=0
+attempt=1
 
-until [ $attempt -ge $max_attempts ]; do
-    attempt=$((attempt + 1))
+# This python command is more robust. It reads the DB URL directly from the
+# secret file path defined in the environment variables.
+until [ $attempt -gt $max_attempts ]; do
     echo "Database connection attempt $attempt/$max_attempts..."
-
-    # Test database connection
+    
     output=$($VENV_PYTHON -c "
-import sys
-sys.path.insert(0, '/home/appuser')
+import sys, os, psycopg2
 try:
-    from shared.config import settings
-    import psycopg2
-    # Extract the database URL value
-    db_url = settings.DATABASE_URL.get_secret_value() if hasattr(settings.DATABASE_URL, 'get_secret_value') else str(settings.DATABASE_URL)
-    print('Attempting database connection...')
+    db_url_file = os.getenv('DATABASE_URL_FILE')
+    if not db_url_file:
+        raise ValueError('DATABASE_URL_FILE environment variable not set.')
+    with open(db_url_file, 'r') as f:
+        db_url = f.read().strip()
     psycopg2.connect(db_url)
-    print('✅ Database connection successful')
 except Exception as e:
-    print(f'❌ Database connection failed: {e}')
-    import traceback
-    traceback.print_exc()
+    print(e, file=sys.stderr)
     exit(1)
 " 2>&1)
 
-    # Check the exit code of the python command
     if [ $? -eq 0 ]; then
         echo "✅ Database is ready!"
         break
     else
         echo "❌ Connection failed: $output"
-        if [ $attempt -ge $max_attempts ]; then
+        if [ $attempt -eq $max_attempts ]; then
             echo "❌ Failed to connect to database after $max_attempts attempts. Exiting."
             exit 1
         fi
         echo "⏳ Database not ready yet, waiting 2 seconds..."
         sleep 2
     fi
+    attempt=$((attempt + 1))
 done
 
-echo "--- Database is available. Starting server. ---"
 
-# Execute the command passed from the Dockerfile's CMD (e.g., hypercorn)
+# --- AUTOMATIC DATABASE MIGRATION SECTION HAS BEEN REMOVED ---
+# Migrations are now handled by the dedicated 'migrations' service in docker-compose.yml.
+# This script's only job is to wait for the DB and start the main process.
+
+echo "--- Setup complete. Starting main process. ---"
+# Execute the command passed from the Dockerfile's CMD (e.g., hypercorn or celery)
+# or any command passed to the 'migrations' service after the wait logic.
 exec "$@"

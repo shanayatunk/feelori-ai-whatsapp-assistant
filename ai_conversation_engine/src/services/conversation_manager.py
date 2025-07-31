@@ -122,6 +122,23 @@ class ConversationManager:
                 else:
                     del self.fallback_storage[key] # Remove expired data
         return []
+    async def health_check(self) -> dict:
+        """
+        Checks the health of the ConversationManager by checking its
+        dependency on Redis.
+        """
+        is_redis_ok = await self._is_redis_available()
+        
+        # If Redis is down, the service still works in fallback mode,
+        # so we'll call the status "degraded" instead of "unhealthy".
+        status = "healthy" if is_redis_ok else "degraded"
+        
+        return {
+            "status": status,
+            "details": {
+                "redis_connected": is_redis_ok
+            }
+        }
 
     async def save_history(self, conversation_id: str, history: List[Dict]) -> bool:
         """

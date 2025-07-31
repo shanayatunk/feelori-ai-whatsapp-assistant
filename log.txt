@@ -1,0 +1,595 @@
+PS C:\Users\hp> cd C:\AI_Assistant_Solution
+PS C:\AI_Assistant_Solution> docker-compose up --build
+[+] Building 37.8s (68/68) FINISHED
+ => [internal] load local bake definitions                                                                         0.0s
+ => => reading from stdin 2.19kB                                                                                   0.0s
+ => [ecommerce-integration internal] load build definition from Dockerfile                                         0.1s
+ => => transferring dockerfile: 1.24kB                                                                             0.0s
+ => [ai-conversation-engine internal] load build definition from Dockerfile                                        0.1s
+ => => transferring dockerfile: 1.46kB                                                                             0.0s
+ => [admin-dashboard internal] load build definition from Dockerfile                                               0.1s
+ => => transferring dockerfile: 1.26kB                                                                             0.0s
+ => [celery-worker internal] load build definition from Dockerfile                                                 0.0s
+ => => transferring dockerfile: 1.21kB                                                                             0.0s
+ => [migrations internal] load metadata for docker.io/library/python:3.11.9-slim                                   2.3s
+ => [admin-dashboard internal] load metadata for docker.io/library/nginx:1.21.6-alpine                             2.3s
+ => [admin-dashboard internal] load metadata for docker.io/library/node:18-alpine                                  2.3s
+ => [ecommerce-integration internal] load metadata for docker.io/library/python:3.11-slim                          2.2s
+ => [auth] library/python:pull token for registry-1.docker.io                                                      0.0s
+ => [auth] library/node:pull token for registry-1.docker.io                                                        0.0s
+ => [auth] library/nginx:pull token for registry-1.docker.io                                                       0.0s
+ => [migrations internal] load .dockerignore                                                                       0.0s
+ => => transferring context: 2B                                                                                    0.0s
+ => [ai-conversation-engine internal] load .dockerignore                                                           0.0s
+ => => transferring context: 2B                                                                                    0.0s
+ => [ecommerce-integration internal] load .dockerignore                                                            0.0s
+ => => transferring context: 2B                                                                                    0.0s
+ => [admin-dashboard internal] load .dockerignore                                                                  0.0s
+ => => transferring context: 2B                                                                                    0.0s
+ => [celery-worker  1/12] FROM docker.io/library/python:3.11.9-slim@sha256:8fb099199b9f2d70342674bd9dbccd3ed03a25  0.1s
+ => => resolve docker.io/library/python:3.11.9-slim@sha256:8fb099199b9f2d70342674bd9dbccd3ed03a258f26bbd1d556822c  0.1s
+ => [whatsapp-gateway internal] load build context                                                                 0.0s
+ => => transferring context: 12.96kB                                                                               0.0s
+ => [ai-conversation-engine 1/8] FROM docker.io/library/python:3.11-slim@sha256:0ce77749ac83174a31d5e107ce0cfa6b2  0.1s
+ => => resolve docker.io/library/python:3.11-slim@sha256:0ce77749ac83174a31d5e107ce0cfa6b28a2fd6b0615e029d9d84b39  0.1s
+ => [ai-conversation-engine internal] load build context                                                           0.1s
+ => => transferring context: 58.12kB                                                                               0.0s
+ => [ecommerce-integration internal] load build context                                                            0.1s
+ => => transferring context: 11.70kB                                                                               0.0s
+ => [admin-dashboard builder 1/6] FROM docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011  0.1s
+ => => resolve docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8c  0.1s
+ => [admin-dashboard stage-1 1/3] FROM docker.io/library/nginx:1.21.6-alpine@sha256:a74534e76ee1121d418fa7394ca93  0.1s
+ => => resolve docker.io/library/nginx:1.21.6-alpine@sha256:a74534e76ee1121d418fa7394ca930eb67440deda413848bc67c6  0.1s
+ => [admin-dashboard internal] load build context                                                                  0.0s
+ => => transferring context: 1.48kB                                                                                0.0s
+ => CACHED [admin-dashboard builder 2/6] WORKDIR /app                                                              0.0s
+ => CACHED [admin-dashboard builder 3/6] COPY package*.json ./                                                     0.0s
+ => CACHED [admin-dashboard builder 4/6] RUN npm install --legacy-peer-deps                                        0.0s
+ => CACHED [admin-dashboard builder 5/6] COPY . .                                                                  0.0s
+ => CACHED [admin-dashboard builder 6/6] RUN npm run build                                                         0.0s
+ => CACHED [admin-dashboard stage-1 2/3] COPY --from=builder /app/dist /usr/share/nginx/html                       0.0s
+ => CACHED [admin-dashboard stage-1 3/3] COPY nginx.conf /etc/nginx/conf.d/default.conf                            0.0s
+ => [admin-dashboard] exporting to image                                                                           0.2s
+ => => exporting layers                                                                                            0.0s
+ => => exporting manifest sha256:823b542dccc51e08720ec81c5155859fc664e9c1a0b28d01ccafad8fe1ab99b3                  0.0s
+ => => exporting config sha256:0c8a206c2a7fc626f3d8d9daa8796b38e86c3cbcfaff8e9df561f87ec4f60b1c                    0.0s
+ => => exporting attestation manifest sha256:10f12ef2237595bcf532370e64fd00df7c50910cf016b4381d4089c384bac3a3      0.0s
+ => => exporting manifest list sha256:c6e14d39391216d2f4a915d7647afe172cc5cde149fbdc78b4dc9fa9b8cea266             0.0s
+ => => naming to docker.io/library/ai_assistant_solution-admin-dashboard:latest                                    0.0s
+ => => unpacking to docker.io/library/ai_assistant_solution-admin-dashboard:latest                                 0.0s
+ => CACHED [celery-worker  2/12] RUN apt-get update && apt-get install -y     libpq5     curl     gcc     libpq-d  0.0s
+ => CACHED [celery-worker  3/12] WORKDIR /app                                                                      0.0s
+ => CACHED [celery-worker  4/12] COPY requirements.txt .                                                           0.0s
+ => CACHED [celery-worker  5/12] RUN python -m venv /opt/venv                                                      0.0s
+ => CACHED [celery-worker  6/12] RUN pip install --no-cache-dir -r requirements.txt                                0.0s
+ => [migrations  7/12] COPY ./src ./src                                                                            0.1s
+ => CACHED [ecommerce-integration 2/8] RUN apt-get update && apt-get install -y     curl     gcc     libpq-dev     0.0s
+ => CACHED [ecommerce-integration 3/8] WORKDIR /app                                                                0.0s
+ => [ecommerce-integration 4/8] COPY ./src /app/src                                                                0.1s
+ => CACHED [ai-conversation-engine 2/8] RUN apt-get update && apt-get install -y     curl     && rm -rf /var/lib/  0.0s
+ => CACHED [ai-conversation-engine 3/8] WORKDIR /app                                                               0.0s
+ => [ai-conversation-engine 4/8] COPY ./src /app/src                                                               0.1s
+ => [whatsapp-gateway  8/12] COPY ./migrations ./migrations                                                        0.2s
+ => [ecommerce-integration 5/8] COPY requirements.txt /app                                                         0.1s
+ => [ai-conversation-engine 5/8] COPY requirements.txt /app                                                        0.1s
+ => [ecommerce-integration 6/8] RUN pip install --no-cache-dir --timeout=600 -r requirements.txt                   7.4s
+ => [celery-worker  9/12] COPY ./entrypoint.sh .                                                                   0.1s
+ => [ai-conversation-engine 6/8] RUN pip install --no-cache-dir --timeout=600 --retries 10 --default-timeout 100  24.5s
+ => [whatsapp-gateway 10/12] RUN chmod +x ./entrypoint.sh                                                          0.4s
+ => [admin-dashboard] resolving provenance for metadata file                                                       0.0s
+ => [whatsapp-gateway 11/12] RUN useradd -m -u 1000 appuser                                                        0.5s
+ => [celery-worker 12/12] RUN chown -R appuser:appuser /app                                                        0.8s
+ => [celery-worker] exporting to image                                                                             1.7s
+ => => exporting layers                                                                                            0.4s
+ => => exporting manifest sha256:b20595d96bee04f55c536ec6fb290d63ce7258e359b0533a7a1ba0ccdb9f6d9d                  0.8s
+ => => exporting config sha256:9c2887ac2b3a7e88ab96d22e280dc49fc9763818c0d42b0a88460f4b707c7202                    0.0s
+ => => exporting attestation manifest sha256:90ed3f03bc1fe2fe9e87218de1ce24c2d001becb3c0e219c821ab61f90d1c0da      0.1s
+ => => exporting manifest list sha256:f94d582256ccb001f1e38f2c8cb84d5ef15a2dce26753139296c87e1be21cc5f             0.1s
+ => => naming to docker.io/library/ai_assistant_solution-celery-worker:latest                                      0.0s
+ => => unpacking to docker.io/library/ai_assistant_solution-celery-worker:latest                                   0.2s
+ => [migrations] exporting to image                                                                                1.7s
+ => => exporting layers                                                                                            0.4s
+ => => exporting manifest sha256:b20595d96bee04f55c536ec6fb290d63ce7258e359b0533a7a1ba0ccdb9f6d9d                  0.8s
+ => => exporting config sha256:9c2887ac2b3a7e88ab96d22e280dc49fc9763818c0d42b0a88460f4b707c7202                    0.0s
+ => => exporting attestation manifest sha256:116515d78b9667b6b874773f96646109ba419dafdad867fbc5911db0e3ab4e12      0.1s
+ => => exporting manifest list sha256:881a437fd8b92c419bbd7415b7c1dad30587c4d624f8b7424fcf0c220bf6c3bf             0.1s
+ => => naming to docker.io/library/ai_assistant_solution-migrations:latest                                         0.0s
+ => => unpacking to docker.io/library/ai_assistant_solution-migrations:latest                                      0.2s
+ => [whatsapp-gateway] exporting to image                                                                          1.7s
+ => => exporting layers                                                                                            0.4s
+ => => exporting manifest sha256:b20595d96bee04f55c536ec6fb290d63ce7258e359b0533a7a1ba0ccdb9f6d9d                  0.8s
+ => => exporting config sha256:9c2887ac2b3a7e88ab96d22e280dc49fc9763818c0d42b0a88460f4b707c7202                    0.0s
+ => => exporting attestation manifest sha256:29c70faa6cb0fa1d66b5d174853abf5a1e4aafc964d58d236e5d15984ad67079      0.1s
+ => => exporting manifest list sha256:fdb01e8d646698ede16e197673928b4fcafa4ca591d1309d81b3bf598763cac2             0.1s
+ => => naming to docker.io/library/ai_assistant_solution-whatsapp-gateway:latest                                   0.0s
+ => => unpacking to docker.io/library/ai_assistant_solution-whatsapp-gateway:latest                                0.2s
+ => [whatsapp-gateway] resolving provenance for metadata file                                                      0.2s
+ => [migrations] resolving provenance for metadata file                                                            0.1s
+ => [celery-worker] resolving provenance for metadata file                                                         0.0s
+ => [ecommerce-integration 7/8] RUN useradd -m -u 1000 appuser                                                     0.6s
+ => [ecommerce-integration 8/8] RUN chown -R appuser:appuser /app                                                  0.4s
+ => [ecommerce-integration] exporting to image                                                                     3.4s
+ => => exporting layers                                                                                            2.3s
+ => => exporting manifest sha256:9af769aa9bdd0be600439a0deb5ec6d225f7ee5e7b7817486a530c40215bf739                  0.0s
+ => => exporting config sha256:d383d35b02b0c88bd0f13f53510f7e01025705f7961ca816b73f21fa3473afc0                    0.0s
+ => => exporting attestation manifest sha256:5419d14f8a57cef067eb3ce4972942b1c8f2570b4bc5c150040fe4dad411c34f      0.0s
+ => => exporting manifest list sha256:82a4362823afe80f19a96dff9b19f12e3ac9337e8edf97dffd4eb62875dfba6c             0.0s
+ => => naming to docker.io/library/ai_assistant_solution-ecommerce-integration:latest                              0.0s
+ => => unpacking to docker.io/library/ai_assistant_solution-ecommerce-integration:latest                           0.9s
+ => [ecommerce-integration] resolving provenance for metadata file                                                 0.0s
+ => [ai-conversation-engine 7/8] RUN useradd -m -u 1000 appuser                                                    0.3s
+ => [ai-conversation-engine 8/8] RUN chown -R appuser:appuser /app                                                 0.4s
+ => [ai-conversation-engine] exporting to image                                                                    8.4s
+ => => exporting layers                                                                                            6.3s
+ => => exporting manifest sha256:6cfa40fa4cb58943028763300e04caeb201c7fdbb86a32bf14559e7f23019ea2                  0.0s
+ => => exporting config sha256:00ddee77b122b8bb604d0ebabc01dff8268243e253fbaf1caae61ab950b98558                    0.0s
+ => => exporting attestation manifest sha256:07ed9e2b68728ca2dc8b4630a77adf44e95b70a00a0efc2012894c485df44e90      0.0s
+ => => exporting manifest list sha256:62009e39b053ff618d89d7fd51e766309fedf231be4082e0567cbe975a241102             0.0s
+ => => naming to docker.io/library/ai_assistant_solution-ai-conversation-engine:latest                             0.0s
+ => => unpacking to docker.io/library/ai_assistant_solution-ai-conversation-engine:latest                          2.0s
+ => [ai-conversation-engine] resolving provenance for metadata file                                                0.0s
+[+] Running 16/16
+ ✔ whatsapp-gateway                                          Built                                                 0.0s
+ ✔ ecommerce-integration                                     Built                                                 0.0s
+ ✔ ai-conversation-engine                                    Built                                                 0.0s
+ ✔ admin-dashboard                                           Built                                                 0.0s
+ ✔ migrations                                                Built                                                 0.0s
+ ✔ celery-worker                                             Built                                                 0.0s
+ ✔ Container ai_assistant_solution-redis-1                   Running                                               0.0s
+ ✔ Container ai_assistant_solution-postgres-1                Runni...                                              0.0s
+ ✔ Container ai_assistant_solution-admin-dashboard-1         Recreated                                             1.8s
+ ✔ Container ai_assistant_solution-otel-collector-1          Running                                               0.0s
+ ✔ Container ai_assistant_solution-migrations-1              Rec...                                                1.4s
+ ✔ Container ai_assistant_solution-ai-conversation-engine-1  Recreated                                             2.5s
+ ✔ Container ai_assistant_solution-ecommerce-integration-1   Recreated                                             2.1s
+ ✔ Container ai_assistant_solution-whatsapp-gateway-1        Recreated                                             1.2s
+ ✔ Container ai_assistant_solution-celery-worker-1           Recreated                                             1.2s
+ ✔ Container ai_assistant_solution-nginx-1                   Running                                               0.0s
+Attaching to admin-dashboard-1, ai-conversation-engine-1, celery-worker-1, ecommerce-integration-1, migrations-1, nginx-1, otel-collector-1, postgres-1, redis-1, whatsapp-gateway-1
+admin-dashboard-1         | /docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration
+admin-dashboard-1         | /docker-entrypoint.sh: Looking for shell scripts in /docker-entrypoint.d/
+admin-dashboard-1         | /docker-entrypoint.sh: Launching /docker-entrypoint.d/10-listen-on-ipv6-by-default.sh
+admin-dashboard-1         | 10-listen-on-ipv6-by-default.sh: info: Getting the checksum of /etc/nginx/conf.d/default.conf
+admin-dashboard-1         | 10-listen-on-ipv6-by-default.sh: info: /etc/nginx/conf.d/default.conf differs from the packaged version
+admin-dashboard-1         | /docker-entrypoint.sh: Launching /docker-entrypoint.d/20-envsubst-on-templates.sh
+admin-dashboard-1         | /docker-entrypoint.sh: Launching /docker-entrypoint.d/30-tune-worker-processes.sh
+admin-dashboard-1         | /docker-entrypoint.sh: Configuration complete; ready for start up
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: using the "epoll" event method
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: nginx/1.21.6
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: built by gcc 10.3.1 20211027 (Alpine 10.3.1_git20211027)
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: OS: Linux 6.6.87.2-microsoft-standard-WSL2
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 1048576:1048576
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: start worker processes
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: start worker process 31
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: start worker process 32
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: start worker process 33
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: start worker process 34
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: start worker process 35
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: start worker process 36
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: start worker process 37
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: start worker process 38
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: start worker process 39
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: start worker process 40
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: start worker process 41
+admin-dashboard-1         | 2025/07/31 13:35:26 [notice] 1#1: start worker process 42
+migrations-1              | --- Starting Service ---
+migrations-1              | --- Waiting for database to be ready ---
+migrations-1              | Database connection attempt 1/30...
+migrations-1              | ✅ Database is ready!
+migrations-1              | --- Setup complete. Starting main process. ---
+migrations-1              | Running database migrations...
+ecommerce-integration-1   | [2025-07-31 13:35:28 +0000] [8] [INFO] Running on http://0.0.0.0:5002 (CTRL + C to quit)
+ecommerce-integration-1   | INFO:hypercorn.error:Running on http://0.0.0.0:5002 (CTRL + C to quit)
+ai-conversation-engine-1  | 2025-07-31 13:35:28,767 - INFO - [STARTUP] - {"event": "CORS enabled for origins: ['http://localhost:8080', 'http://127.0.0.1:8080']", "timestamp": "2025-07-31T13:35:28.767593Z", "level": "info"}
+ai-conversation-engine-1  | 2025-07-31 13:35:28,772 - INFO - [STARTUP] - {"event": "Application startup...", "timestamp": "2025-07-31T13:35:28.772064Z", "level": "info"}
+ai-conversation-engine-1  | 2025-07-31 13:35:28,818 - INFO - [STARTUP] - Circuit breaker 'LLM_Gemini' initialized
+ai-conversation-engine-1  | 2025-07-31 13:35:28,819 - INFO - [STARTUP] - Circuit breaker 'LLM_OpenAI' initialized
+ai-conversation-engine-1  | 2025-07-31 13:35:28,819 - INFO - [STARTUP] - Circuit breaker 'ECommerce' initialized
+ai-conversation-engine-1  | 2025-07-31 13:35:28,819 - INFO - [STARTUP] - No DEFAULT_DOCS in env, using hardcoded fallback.
+ai-conversation-engine-1  | 2025-07-31 13:35:28,821 - INFO - [STARTUP] - Generating new embeddings as cache is invalid or missing.
+ai-conversation-engine-1  | 2025-07-31 13:35:29,557 - INFO - [STARTUP] - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent "HTTP/1.1 200 OK"
+migrations-1              | 🔄 Initializing application settings...
+migrations-1              | ✅ Loaded GEMINI_API_KEY from secret file
+migrations-1              | ✅ Loaded OPENAI_API_KEY from secret file
+migrations-1              | ✅ Loaded INTERNAL_API_KEY from secret file
+migrations-1              | ✅ Loaded DATABASE_URL from secret file
+migrations-1              | ✅ Loaded WHATSAPP_ACCESS_TOKEN from secret file
+migrations-1              | ✅ Loaded WHATSAPP_PHONE_NUMBER_ID from secret file
+migrations-1              | ✅ Loaded WHATSAPP_VERIFY_TOKEN from secret file
+migrations-1              | ✅ Loaded WHATSAPP_WEBHOOK_SECRET from secret file
+migrations-1              | ⚠️  Could not load SHOPIFY_ACCESS_TOKEN from SHOPIFY_ACCESS_TOKEN_FILE
+migrations-1              | ✅ Loaded REDIS_PASSWORD from secret file
+migrations-1              | ✅ Loaded API_KEY from secret file
+migrations-1              | ✅ Set SECRET_KEY from INTERNAL_API_KEY
+migrations-1              | ✅ Constructed REDIS_URL
+migrations-1              | ✅ Settings initialized successfully
+migrations-1              | {"event": "Sync WhatsApp Service initialized.", "level": "info"}
+migrations-1              | {"event": "Sync WhatsApp Service initialized.", "level": "info"}
+migrations-1              | INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+migrations-1              | INFO  [alembic.runtime.migration] Will assume transactional DDL.
+ai-conversation-engine-1  | 2025-07-31 13:35:30,752 - INFO - [STARTUP] - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent "HTTP/1.1 200 OK"
+ai-conversation-engine-1  | 2025-07-31 13:35:30,757 - INFO - [STARTUP] - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent "HTTP/1.1 200 OK"
+ai-conversation-engine-1  | 2025-07-31 13:35:30,760 - INFO - [STARTUP] - Knowledge retriever initialized with 3 documents.
+migrations-1              | Migrations complete.
+ai-conversation-engine-1  | 2025-07-31 13:35:30,760 - INFO - [STARTUP] - {"event": "Application startup completed successfully", "timestamp": "2025-07-31T13:35:30.760537Z", "level": "info"}
+ai-conversation-engine-1  | [2025-07-31 13:35:30 +0000] [8] [INFO] Running on http://0.0.0.0:5001 (CTRL + C to quit)
+ai-conversation-engine-1  | 2025-07-31 13:35:30,760 - INFO - [STARTUP] - Running on http://0.0.0.0:5001 (CTRL + C to quit)
+migrations-1 exited with code 0
+celery-worker-1           | --- Starting Service ---
+celery-worker-1           | --- Waiting for database to be ready ---
+celery-worker-1           | Database connection attempt 1/30...
+whatsapp-gateway-1        | --- Starting Service ---
+whatsapp-gateway-1        | --- Waiting for database to be ready ---
+whatsapp-gateway-1        | Database connection attempt 1/30...
+celery-worker-1           | ✅ Database is ready!
+celery-worker-1           | --- Setup complete. Starting main process. ---
+whatsapp-gateway-1        | ✅ Database is ready!
+whatsapp-gateway-1        | --- Setup complete. Starting main process. ---
+admin-dashboard-1         | 127.0.0.1 - - [31/Jul/2025:13:35:32 +0000] "GET / HTTP/1.1" 200 477 "-" "curl/7.80.0" "-"
+celery-worker-1           | 🔄 Initializing application settings...
+celery-worker-1           | ✅ Loaded GEMINI_API_KEY from secret file
+celery-worker-1           | ✅ Loaded OPENAI_API_KEY from secret file
+celery-worker-1           | ✅ Loaded INTERNAL_API_KEY from secret file
+celery-worker-1           | ✅ Loaded DATABASE_URL from secret file
+celery-worker-1           | ✅ Loaded WHATSAPP_ACCESS_TOKEN from secret file
+celery-worker-1           | ✅ Loaded WHATSAPP_PHONE_NUMBER_ID from secret file
+celery-worker-1           | ✅ Loaded WHATSAPP_VERIFY_TOKEN from secret file
+celery-worker-1           | ✅ Loaded WHATSAPP_WEBHOOK_SECRET from secret file
+celery-worker-1           | ✅ Loaded SHOPIFY_ACCESS_TOKEN from secret file
+celery-worker-1           | ✅ Loaded REDIS_PASSWORD from secret file
+celery-worker-1           | ⚠️  Could not load API_KEY from API_KEY_FILE
+celery-worker-1           | ✅ Set SECRET_KEY from INTERNAL_API_KEY
+celery-worker-1           | ✅ Constructed REDIS_URL
+celery-worker-1           | ✅ Settings initialized successfully
+celery-worker-1           |
+celery-worker-1           |  -------------- celery@1add15498d3e v5.5.3 (immunity)
+celery-worker-1           | --- ***** -----
+celery-worker-1           | -- ******* ---- Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.36 2025-07-31 13:35:32
+celery-worker-1           | - *** --- * ---
+celery-worker-1           | - ** ---------- [config]
+celery-worker-1           | - ** ---------- .> app:         whatsapp_gateway_tasks:0x7f9a6f9f2110
+celery-worker-1           | - ** ---------- .> transport:   redis://:**@redis:6379/0
+celery-worker-1           | - ** ---------- .> results:     redis://:**@redis:6379/0
+celery-worker-1           | - *** --- * --- .> concurrency: 2 (prefork)
+celery-worker-1           | -- ******* ---- .> task events: ON
+celery-worker-1           | --- ***** -----
+celery-worker-1           |  -------------- [queues]
+celery-worker-1           |                 .> celery           exchange=celery(direct) key=celery
+celery-worker-1           |
+celery-worker-1           |
+celery-worker-1           | [tasks]
+celery-worker-1           |   . health_check_task
+celery-worker-1           |   . process_and_reply_task
+celery-worker-1           |
+celery-worker-1           | [2025-07-31 13:35:32,332: INFO/MainProcess] Connected to redis://:**@redis:6379/0
+celery-worker-1           | [2025-07-31 13:35:32,336: INFO/MainProcess] mingle: searching for neighbors
+ai-conversation-engine-1  | 2025-07-31 13:35:32,956 - INFO - [f102f7a3-deb6-400f-a47f-e7f979828d2a] - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent "HTTP/1.1 200 OK"
+whatsapp-gateway-1        | 🔄 Initializing application settings...
+whatsapp-gateway-1        | ✅ Loaded GEMINI_API_KEY from secret file
+whatsapp-gateway-1        | ✅ Loaded OPENAI_API_KEY from secret file
+whatsapp-gateway-1        | ✅ Loaded INTERNAL_API_KEY from secret file
+whatsapp-gateway-1        | ✅ Loaded DATABASE_URL from secret file
+whatsapp-gateway-1        | ✅ Loaded WHATSAPP_ACCESS_TOKEN from secret file
+whatsapp-gateway-1        | ✅ Loaded WHATSAPP_PHONE_NUMBER_ID from secret file
+whatsapp-gateway-1        | ✅ Loaded WHATSAPP_VERIFY_TOKEN from secret file
+whatsapp-gateway-1        | ✅ Loaded WHATSAPP_WEBHOOK_SECRET from secret file
+whatsapp-gateway-1        | ✅ Loaded SHOPIFY_ACCESS_TOKEN from secret file
+whatsapp-gateway-1        | ✅ Loaded REDIS_PASSWORD from secret file
+whatsapp-gateway-1        | ✅ Loaded API_KEY from secret file
+whatsapp-gateway-1        | ✅ Set SECRET_KEY from INTERNAL_API_KEY
+whatsapp-gateway-1        | ✅ Constructed REDIS_URL
+whatsapp-gateway-1        | ✅ Settings initialized successfully
+whatsapp-gateway-1        | {"event": "Sync WhatsApp Service initialized.", "level": "info"}
+whatsapp-gateway-1        | {"event": "Sync WhatsApp Service initialized.", "level": "info"}
+whatsapp-gateway-1        | [2025-07-31 13:35:33 +0000] [9] [INFO] Running on http://0.0.0.0:5000 (CTRL + C to quit)
+celery-worker-1           | [2025-07-31 13:35:33,348: INFO/MainProcess] mingle: all alone
+celery-worker-1           | [2025-07-31 13:35:33,369: INFO/MainProcess] celery@1add15498d3e ready.
+otel-collector-1          | 2025-07-31T13:35:33.774Z    info    TracesExporter  {"kind": "exporter", "data_type": "traces", "name": "logging", "resource spans": 1, "spans": 1}
+otel-collector-1          | 2025-07-31T13:35:33.774Z    info    ResourceSpans #0
+otel-collector-1          | Resource SchemaURL:
+otel-collector-1          | Resource attributes:
+otel-collector-1          |      -> telemetry.sdk.language: Str(python)
+otel-collector-1          |      -> telemetry.sdk.name: Str(opentelemetry)
+otel-collector-1          |      -> telemetry.sdk.version: Str(1.36.0)
+otel-collector-1          |      -> service.name: Str(unknown_service)
+otel-collector-1          | ScopeSpans #0
+otel-collector-1          | ScopeSpans SchemaURL:
+otel-collector-1          | InstrumentationScope src.routes.conversation
+otel-collector-1          | Span #0
+otel-collector-1          |     Trace ID       : ba9f668434edd3df862376ebd9d055f0
+otel-collector-1          |     Parent ID      :
+otel-collector-1          |     ID             : 0b6aef9a4f336261
+otel-collector-1          |     Name           : health_check
+otel-collector-1          |     Kind           : Internal
+otel-collector-1          |     Start time     : 2025-07-31 13:35:32.212926997 +0000 UTC
+otel-collector-1          |     End time       : 2025-07-31 13:35:32.972856926 +0000 UTC
+otel-collector-1          |     Status code    : Unset
+otel-collector-1          |     Status message :
+otel-collector-1          |     {"kind": "exporter", "data_type": "traces", "name": "logging"}
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "redis_key": "webhook_seen:wamid.HBgMOTE5OTY3NjgwNTc5FQIAEhgUM0E5QkQ2MkU0MDVCNDY3RTM2OEIA:+919967680579", "event": "Deduplication key used", "method": "POST", "correlation_id": "cdd7c3d2-a59f-47d6-8201-51ee921bdebe", "path": "/api/webhook", "level": "debug"}
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "status_code": 200, "duration_ms": 79.41, "event": "Request completed", "method": "POST", "correlation_id": "cdd7c3d2-a59f-47d6-8201-51ee921bdebe", "path": "/api/webhook", "level": "info"}
+celery-worker-1           | [2025-07-31 13:35:52,459: INFO/MainProcess] Task process_and_reply_task[7014a138-de7a-42fb-a2c7-49fa2cfa4526] received
+nginx-1                   | 172.18.0.1 - - [31/Jul/2025:13:35:52 +0000] "POST /api/gateway/webhook HTTP/1.1" 200 46 "-" "facebookexternalua"
+celery-worker-1           | [2025-07-31 13:35:52,462: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 0, "max_retries": 5, "event": "Starting message processing task", "task_id": "7014a138-de7a-42fb-a2c7-49fa2cfa4526", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cdd7c3d2-a59f-47d6-8201-51ee921bdebe", "level": "info", "timestamp": "2025-07-31T13:35:52.462565Z"}
+celery-worker-1           | [2025-07-31 13:35:52,638: WARNING/ForkPoolWorker-2] {"event": "Sync WhatsApp Service initialized.", "task_id": "7014a138-de7a-42fb-a2c7-49fa2cfa4526", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cdd7c3d2-a59f-47d6-8201-51ee921bdebe", "level": "info", "timestamp": "2025-07-31T13:35:52.638078Z"}
+celery-worker-1           | [2025-07-31 13:35:52,653: INFO/ForkPoolWorker-2] Synchronous Redis client connected successfully.
+celery-worker-1           | [2025-07-31 13:35:52,653: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 0, "max_retries": 5, "endpoint": "http://ai-conversation-engine:5001/ai/v1/process", "event": "Calling AI service", "task_id": "7014a138-de7a-42fb-a2c7-49fa2cfa4526", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cdd7c3d2-a59f-47d6-8201-51ee921bdebe", "level": "debug", "timestamp": "2025-07-31T13:35:52.653881Z"}
+ai-conversation-engine-1  | 2025-07-31 13:35:52,762 - INFO - [337d060b-6fa2-4b9f-b163-9e7e61c4a50a] - {"event": "Attempting response generation with primary LLM (Gemini).", "timestamp": "2025-07-31T13:35:52.762647Z", "level": "info"}
+ai-conversation-engine-1  | 2025-07-31 13:35:53,790 - INFO - [337d060b-6fa2-4b9f-b163-9e7e61c4a50a] - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+ai-conversation-engine-1  | 2025-07-31 13:35:53,791 - ERROR - [337d060b-6fa2-4b9f-b163-9e7e61c4a50a] - {"exc_info": true, "event": "Critical error processing message", "timestamp": "2025-07-31T13:35:53.791402Z", "level": "error"}
+celery-worker-1           | [2025-07-31 13:35:53,793: INFO/ForkPoolWorker-2] HTTP Request: POST http://ai-conversation-engine:5001/ai/v1/process "HTTP/1.1 500 "
+ai-conversation-engine-1  | 2025-07-31 13:35:53,791 - WARNING - [337d060b-6fa2-4b9f-b163-9e7e61c4a50a] - {"error_type": "internal_error", "response_message": "I encountered an unexpected internal error. My team has been notified.", "conv_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "event": "AI processor returned an error", "timestamp": "2025-07-31T13:35:53.791582Z", "level": "warning"}
+celery-worker-1           | [2025-07-31 13:35:53,794: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 0, "max_retries": 5, "detail": "HTTP 500: {\"error\":\"internal_server_error\",\"message\":\"I encountered an unexpected internal error. My team has been notified.\",\"timestamp\":1753968953}\n", "event": "AI service HTTP error", "task_id": "7014a138-de7a-42fb-a2c7-49fa2cfa4526", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cdd7c3d2-a59f-47d6-8201-51ee921bdebe", "level": "error", "timestamp": "2025-07-31T13:35:53.794894Z"}
+celery-worker-1           | [2025-07-31 13:35:53,795: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 0, "max_retries": 5, "error": "AI service server error: HTTP 500: {\"error\":\"internal_server_error\",\"message\":\"I encountered an unexpected internal error. My team has been notified.\",\"timestamp\":1753968953}\n", "error_type": "AIServiceError", "exc_info": true, "event": "Task failed, will be retried if applicable", "task_id": "7014a138-de7a-42fb-a2c7-49fa2cfa4526", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cdd7c3d2-a59f-47d6-8201-51ee921bdebe", "level": "error", "timestamp": "2025-07-31T13:35:53.795113Z"}
+celery-worker-1           | [2025-07-31 13:35:53,808: INFO/MainProcess] Task process_and_reply_task[7014a138-de7a-42fb-a2c7-49fa2cfa4526] received
+celery-worker-1           | [2025-07-31 13:35:53,858: INFO/ForkPoolWorker-2] Task process_and_reply_task[7014a138-de7a-42fb-a2c7-49fa2cfa4526] retry: Retry in 2s: AIServiceError('AI service server error: HTTP 500: {"error":"internal_server_error","message":"I encountered an unexpected internal error. My team has been notified.","timestamp":1753968953}\n')
+celery-worker-1           | [2025-07-31 13:35:55,800: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 1, "max_retries": 5, "event": "Starting message processing task", "task_id": "7014a138-de7a-42fb-a2c7-49fa2cfa4526", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cdd7c3d2-a59f-47d6-8201-51ee921bdebe", "level": "info", "timestamp": "2025-07-31T13:35:55.800711Z"}
+celery-worker-1           | [2025-07-31 13:35:55,803: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 1, "max_retries": 5, "endpoint": "http://ai-conversation-engine:5001/ai/v1/process", "event": "Calling AI service", "task_id": "7014a138-de7a-42fb-a2c7-49fa2cfa4526", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cdd7c3d2-a59f-47d6-8201-51ee921bdebe", "level": "debug", "timestamp": "2025-07-31T13:35:55.803149Z"}
+celery-worker-1           | [2025-07-31 13:35:55,830: INFO/ForkPoolWorker-2] HTTP Request: POST http://ai-conversation-engine:5001/ai/v1/process "HTTP/1.1 200 "
+celery-worker-1           | [2025-07-31 13:35:55,830: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 1, "max_retries": 5, "event": "AI service response received successfully", "task_id": "7014a138-de7a-42fb-a2c7-49fa2cfa4526", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cdd7c3d2-a59f-47d6-8201-51ee921bdebe", "level": "debug", "timestamp": "2025-07-31T13:35:55.830586Z"}
+celery-worker-1           | [2025-07-31 13:35:55,830: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 1, "max_retries": 5, "recipient": "+919967680579", "event": "Dispatching synchronous send_message to a new event loop.", "task_id": "7014a138-de7a-42fb-a2c7-49fa2cfa4526", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cdd7c3d2-a59f-47d6-8201-51ee921bdebe", "level": "info", "timestamp": "2025-07-31T13:35:55.830759Z"}
+celery-worker-1           | [2025-07-31 13:35:55,830: WARNING/ForkPoolWorker-2] {"event": "Sync WhatsApp Service initialized.", "task_id": "7014a138-de7a-42fb-a2c7-49fa2cfa4526", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cdd7c3d2-a59f-47d6-8201-51ee921bdebe", "level": "info", "timestamp": "2025-07-31T13:35:55.830825Z"}
+celery-worker-1           | [2025-07-31 13:35:55,830: WARNING/ForkPoolWorker-2] {"recipient": "+919967680579", "event": "Dispatching synchronous send_message to event loop.", "task_id": "7014a138-de7a-42fb-a2c7-49fa2cfa4526", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cdd7c3d2-a59f-47d6-8201-51ee921bdebe", "level": "info", "timestamp": "2025-07-31T13:35:55.830883Z"}
+celery-worker-1           | [2025-07-31 13:35:57,174: WARNING/ForkPoolWorker-2] {"recipient": "919967680579", "message_id": "wamid.HBgMOTE5OTY3NjgwNTc5FQIAERgSNDk2MjZEMDU5NjY5QzlDRURFAA==", "event": "Successfully sent WhatsApp message", "task_id": "7014a138-de7a-42fb-a2c7-49fa2cfa4526", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cdd7c3d2-a59f-47d6-8201-51ee921bdebe", "level": "info", "timestamp": "2025-07-31T13:35:57.174084Z"}
+celery-worker-1           | [2025-07-31 13:35:57,174: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 1, "max_retries": 5, "recipient": "+919967680579", "message_id": "wamid.HBgMOTE5OTY3NjgwNTc5FQIAERgSNDk2MjZEMDU5NjY5QzlDRURFAA==", "event": "Successfully sent WhatsApp message", "task_id": "7014a138-de7a-42fb-a2c7-49fa2cfa4526", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cdd7c3d2-a59f-47d6-8201-51ee921bdebe", "level": "info", "timestamp": "2025-07-31T13:35:57.174458Z"}
+celery-worker-1           | [2025-07-31 13:35:57,174: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 1, "max_retries": 5, "processing_time": 1.37, "event": "Task completed successfully", "task_id": "7014a138-de7a-42fb-a2c7-49fa2cfa4526", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cdd7c3d2-a59f-47d6-8201-51ee921bdebe", "level": "info", "timestamp": "2025-07-31T13:35:57.174557Z"}
+celery-worker-1           | [2025-07-31 13:35:57,176: INFO/ForkPoolWorker-2] Task process_and_reply_task[7014a138-de7a-42fb-a2c7-49fa2cfa4526] succeeded in 1.3758845920092426s: {'status': 'success', 'processing_time': 1.3739311695098877}
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "status": "sent", "msg_id": "wamid.HBgMOTE5OTY3NjgwNTc5FQIAERgSNDk2MjZEMDU5NjY5QzlDRURFAA==", "event": "Received message status update", "method": "POST", "correlation_id": "c8e3d4d6-e4bb-4ac8-9d8c-d246eb92c9b0", "path": "/api/webhook", "level": "info"}
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "status_code": 200, "duration_ms": 1.44, "event": "Request completed", "method": "POST", "correlation_id": "c8e3d4d6-e4bb-4ac8-9d8c-d246eb92c9b0", "path": "/api/webhook", "level": "info"}
+nginx-1                   | 172.18.0.1 - - [31/Jul/2025:13:35:58 +0000] "POST /api/gateway/webhook HTTP/1.1" 200 55 "-" "facebookexternalua"
+otel-collector-1          | 2025-07-31T13:35:58.778Z    info    TracesExporter  {"kind": "exporter", "data_type": "traces", "name": "logging", "resource spans": 1, "spans": 2}
+otel-collector-1          | 2025-07-31T13:35:58.780Z    info    ResourceSpans #0
+otel-collector-1          | Resource SchemaURL:
+otel-collector-1          | Resource attributes:
+otel-collector-1          |      -> telemetry.sdk.language: Str(python)
+otel-collector-1          |      -> telemetry.sdk.name: Str(opentelemetry)
+otel-collector-1          |      -> telemetry.sdk.version: Str(1.36.0)
+otel-collector-1          |      -> service.name: Str(unknown_service)
+otel-collector-1          | ScopeSpans #0
+otel-collector-1          | ScopeSpans SchemaURL:
+otel-collector-1          | InstrumentationScope src.routes.conversation
+otel-collector-1          | Span #0
+otel-collector-1          |     Trace ID       : 1227ccd70f55d48c3f2a684bf1e89989
+otel-collector-1          |     Parent ID      :
+otel-collector-1          |     ID             : 264e8c2ae9fc4aa2
+otel-collector-1          |     Name           : process_conversation
+otel-collector-1          |     Kind           : Internal
+otel-collector-1          |     Start time     : 2025-07-31 13:35:52.76159397 +0000 UTC
+otel-collector-1          |     End time       : 2025-07-31 13:35:53.792095879 +0000 UTC
+otel-collector-1          |     Status code    : Unset
+otel-collector-1          |     Status message :
+otel-collector-1          | Span #1
+otel-collector-1          |     Trace ID       : 25f78cc04432022be9336008fac8154f
+otel-collector-1          |     Parent ID      :
+otel-collector-1          |     ID             : a77faf6f3ec4929d
+otel-collector-1          |     Name           : process_conversation
+otel-collector-1          |     Kind           : Internal
+otel-collector-1          |     Start time     : 2025-07-31 13:35:55.82939788 +0000 UTC
+otel-collector-1          |     End time       : 2025-07-31 13:35:55.829682998 +0000 UTC
+otel-collector-1          |     Status code    : Unset
+otel-collector-1          |     Status message :
+otel-collector-1          |     {"kind": "exporter", "data_type": "traces", "name": "logging"}
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "status": "read", "msg_id": "wamid.HBgMOTE5OTY3NjgwNTc5FQIAERgSNDk2MjZEMDU5NjY5QzlDRURFAA==", "event": "Received message status update", "method": "POST", "correlation_id": "c77795c3-8f5c-4c21-90c4-fab2b67cc0da", "path": "/api/webhook", "level": "info"}
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "status_code": 200, "duration_ms": 0.93, "event": "Request completed", "method": "POST", "correlation_id": "c77795c3-8f5c-4c21-90c4-fab2b67cc0da", "path": "/api/webhook", "level": "info"}
+nginx-1                   | 172.18.0.1 - - [31/Jul/2025:13:35:59 +0000] "POST /api/gateway/webhook HTTP/1.1" 200 55 "-" "facebookexternalua"
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "status": "delivered", "msg_id": "wamid.HBgMOTE5OTY3NjgwNTc5FQIAERgSNDk2MjZEMDU5NjY5QzlDRURFAA==", "event": "Received message status update", "method": "POST", "correlation_id": "85def1c1-a091-4572-b8ba-b36ae78cae3f", "path": "/api/webhook", "level": "info"}
+nginx-1                   | 172.18.0.1 - - [31/Jul/2025:13:35:59 +0000] "POST /api/gateway/webhook HTTP/1.1" 200 55 "-" "facebookexternalua"
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "status_code": 200, "duration_ms": 0.61, "event": "Request completed", "method": "POST", "correlation_id": "85def1c1-a091-4572-b8ba-b36ae78cae3f", "path": "/api/webhook", "level": "info"}
+admin-dashboard-1         | 127.0.0.1 - - [31/Jul/2025:13:36:02 +0000] "GET / HTTP/1.1" 200 477 "-" "curl/7.80.0" "-"
+ai-conversation-engine-1  | 2025-07-31 13:36:05,059 - INFO - [d615bbec-ad41-43f3-a4f3-34f97298c7f8] - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent "HTTP/1.1 200 OK"
+otel-collector-1          | 2025-07-31T13:36:08.788Z    info    TracesExporter  {"kind": "exporter", "data_type": "traces", "name": "logging", "resource spans": 1, "spans": 1}
+otel-collector-1          | 2025-07-31T13:36:08.788Z    info    ResourceSpans #0
+otel-collector-1          | Resource SchemaURL:
+otel-collector-1          | Resource attributes:
+otel-collector-1          |      -> telemetry.sdk.language: Str(python)
+otel-collector-1          |      -> telemetry.sdk.name: Str(opentelemetry)
+otel-collector-1          |      -> telemetry.sdk.version: Str(1.36.0)
+otel-collector-1          |      -> service.name: Str(unknown_service)
+otel-collector-1          | ScopeSpans #0
+otel-collector-1          | ScopeSpans SchemaURL:
+otel-collector-1          | InstrumentationScope src.routes.conversation
+otel-collector-1          | Span #0
+otel-collector-1          |     Trace ID       : 4aa0899e3907e9e14b4f1a2e270416dd
+otel-collector-1          |     Parent ID      :
+otel-collector-1          |     ID             : 7390b1d5be297d30
+otel-collector-1          |     Name           : health_check
+otel-collector-1          |     Kind           : Internal
+otel-collector-1          |     Start time     : 2025-07-31 13:36:03.032488307 +0000 UTC
+otel-collector-1          |     End time       : 2025-07-31 13:36:05.06137308 +0000 UTC
+otel-collector-1          |     Status code    : Unset
+otel-collector-1          |     Status message :
+otel-collector-1          |     {"kind": "exporter", "data_type": "traces", "name": "logging"}
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "redis_key": "webhook_seen:wamid.HBgMOTE5OTY3NjgwNTc5FQIAEhgUM0FCMzM3MjNDMTgwMzVBOTFGRUEA:+919967680579", "event": "Deduplication key used", "method": "POST", "correlation_id": "b1e77512-cb80-4c39-beb5-60ca53a51c22", "path": "/api/webhook", "level": "debug"}
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "status_code": 200, "duration_ms": 8.88, "event": "Request completed", "method": "POST", "correlation_id": "b1e77512-cb80-4c39-beb5-60ca53a51c22", "path": "/api/webhook", "level": "info"}
+celery-worker-1           | [2025-07-31 13:36:14,819: INFO/MainProcess] Task process_and_reply_task[22ae4987-ef3b-485d-b8f7-7f26eb53fed7] received
+nginx-1                   | 172.18.0.1 - - [31/Jul/2025:13:36:14 +0000] "POST /api/gateway/webhook HTTP/1.1" 200 46 "-" "facebookexternalua"
+celery-worker-1           | [2025-07-31 13:36:14,820: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 0, "max_retries": 5, "event": "Starting message processing task", "task_id": "22ae4987-ef3b-485d-b8f7-7f26eb53fed7", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "b1e77512-cb80-4c39-beb5-60ca53a51c22", "level": "info", "timestamp": "2025-07-31T13:36:14.820338Z"}
+ai-conversation-engine-1  | 2025-07-31 13:36:14,845 - INFO - [467ba26c-1253-4bf0-9ba1-2f927c43f821] - {"event": "Attempting response generation with primary LLM (Gemini).", "timestamp": "2025-07-31T13:36:14.845029Z", "level": "info"}
+celery-worker-1           | [2025-07-31 13:36:14,821: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 0, "max_retries": 5, "endpoint": "http://ai-conversation-engine:5001/ai/v1/process", "event": "Calling AI service", "task_id": "22ae4987-ef3b-485d-b8f7-7f26eb53fed7", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "b1e77512-cb80-4c39-beb5-60ca53a51c22", "level": "debug", "timestamp": "2025-07-31T13:36:14.821127Z"}
+ai-conversation-engine-1  | 2025-07-31 13:36:19,803 - INFO - [467ba26c-1253-4bf0-9ba1-2f927c43f821] - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+ai-conversation-engine-1  | 2025-07-31 13:36:19,805 - ERROR - [467ba26c-1253-4bf0-9ba1-2f927c43f821] - {"exc_info": true, "event": "Critical error processing message", "timestamp": "2025-07-31T13:36:19.805350Z", "level": "error"}
+celery-worker-1           | [2025-07-31 13:36:19,807: INFO/ForkPoolWorker-2] HTTP Request: POST http://ai-conversation-engine:5001/ai/v1/process "HTTP/1.1 500 "
+ai-conversation-engine-1  | 2025-07-31 13:36:19,805 - WARNING - [467ba26c-1253-4bf0-9ba1-2f927c43f821] - {"error_type": "internal_error", "response_message": "I encountered an unexpected internal error. My team has been notified.", "conv_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "event": "AI processor returned an error", "timestamp": "2025-07-31T13:36:19.805648Z", "level": "warning"}
+celery-worker-1           | [2025-07-31 13:36:19,808: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 0, "max_retries": 5, "detail": "HTTP 500: {\"error\":\"internal_server_error\",\"message\":\"I encountered an unexpected internal error. My team has been notified.\",\"timestamp\":1753968979}\n", "event": "AI service HTTP error", "task_id": "22ae4987-ef3b-485d-b8f7-7f26eb53fed7", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "b1e77512-cb80-4c39-beb5-60ca53a51c22", "level": "error", "timestamp": "2025-07-31T13:36:19.808650Z"}
+celery-worker-1           | [2025-07-31 13:36:19,809: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 0, "max_retries": 5, "error": "AI service server error: HTTP 500: {\"error\":\"internal_server_error\",\"message\":\"I encountered an unexpected internal error. My team has been notified.\",\"timestamp\":1753968979}\n", "error_type": "AIServiceError", "exc_info": true, "event": "Task failed, will be retried if applicable", "task_id": "22ae4987-ef3b-485d-b8f7-7f26eb53fed7", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "b1e77512-cb80-4c39-beb5-60ca53a51c22", "level": "error", "timestamp": "2025-07-31T13:36:19.808969Z"}
+celery-worker-1           | [2025-07-31 13:36:19,814: INFO/MainProcess] Task process_and_reply_task[22ae4987-ef3b-485d-b8f7-7f26eb53fed7] received
+celery-worker-1           | [2025-07-31 13:36:19,817: WARNING/ForkPoolWorker-1] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 1, "max_retries": 5, "event": "Starting message processing task", "customer_phone": "+91996****", "correlation_id": "b1e77512-cb80-4c39-beb5-60ca53a51c22", "task_id": "22ae4987-ef3b-485d-b8f7-7f26eb53fed7", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "level": "info", "timestamp": "2025-07-31T13:36:19.817477Z"}
+celery-worker-1           | [2025-07-31 13:36:19,827: INFO/ForkPoolWorker-2] Task process_and_reply_task[22ae4987-ef3b-485d-b8f7-7f26eb53fed7] retry: Retry in 0s: AIServiceError('AI service server error: HTTP 500: {"error":"internal_server_error","message":"I encountered an unexpected internal error. My team has been notified.","timestamp":1753968979}\n')
+celery-worker-1           | [2025-07-31 13:36:19,957: WARNING/ForkPoolWorker-1] {"event": "Sync WhatsApp Service initialized.", "customer_phone": "+91996****", "correlation_id": "b1e77512-cb80-4c39-beb5-60ca53a51c22", "task_id": "22ae4987-ef3b-485d-b8f7-7f26eb53fed7", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "level": "info", "timestamp": "2025-07-31T13:36:19.957861Z"}
+celery-worker-1           | [2025-07-31 13:36:19,966: INFO/ForkPoolWorker-1] Synchronous Redis client connected successfully.
+celery-worker-1           | [2025-07-31 13:36:19,966: WARNING/ForkPoolWorker-1] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 1, "max_retries": 5, "endpoint": "http://ai-conversation-engine:5001/ai/v1/process", "event": "Calling AI service", "customer_phone": "+91996****", "correlation_id": "b1e77512-cb80-4c39-beb5-60ca53a51c22", "task_id": "22ae4987-ef3b-485d-b8f7-7f26eb53fed7", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "level": "debug", "timestamp": "2025-07-31T13:36:19.966472Z"}
+celery-worker-1           | [2025-07-31 13:36:20,030: INFO/ForkPoolWorker-1] HTTP Request: POST http://ai-conversation-engine:5001/ai/v1/process "HTTP/1.1 200 "
+celery-worker-1           | [2025-07-31 13:36:20,030: WARNING/ForkPoolWorker-1] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 1, "max_retries": 5, "event": "AI service response received successfully", "customer_phone": "+91996****", "correlation_id": "b1e77512-cb80-4c39-beb5-60ca53a51c22", "task_id": "22ae4987-ef3b-485d-b8f7-7f26eb53fed7", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "level": "debug", "timestamp": "2025-07-31T13:36:20.030551Z"}
+celery-worker-1           | [2025-07-31 13:36:20,030: WARNING/ForkPoolWorker-1] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 1, "max_retries": 5, "recipient": "+919967680579", "event": "Dispatching synchronous send_message to a new event loop.", "customer_phone": "+91996****", "correlation_id": "b1e77512-cb80-4c39-beb5-60ca53a51c22", "task_id": "22ae4987-ef3b-485d-b8f7-7f26eb53fed7", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "level": "info", "timestamp": "2025-07-31T13:36:20.030665Z"}
+celery-worker-1           | [2025-07-31 13:36:20,030: WARNING/ForkPoolWorker-1] {"event": "Sync WhatsApp Service initialized.", "customer_phone": "+91996****", "correlation_id": "b1e77512-cb80-4c39-beb5-60ca53a51c22", "task_id": "22ae4987-ef3b-485d-b8f7-7f26eb53fed7", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "level": "info", "timestamp": "2025-07-31T13:36:20.030749Z"}
+celery-worker-1           | [2025-07-31 13:36:20,030: WARNING/ForkPoolWorker-1] {"recipient": "+919967680579", "event": "Dispatching synchronous send_message to event loop.", "customer_phone": "+91996****", "correlation_id": "b1e77512-cb80-4c39-beb5-60ca53a51c22", "task_id": "22ae4987-ef3b-485d-b8f7-7f26eb53fed7", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "level": "info", "timestamp": "2025-07-31T13:36:20.030825Z"}
+celery-worker-1           | [2025-07-31 13:36:21,247: WARNING/ForkPoolWorker-1] {"recipient": "919967680579", "message_id": "wamid.HBgMOTE5OTY3NjgwNTc5FQIAERgSQ0I1RkMyN0FFMkJFNDQzM0E4AA==", "event": "Successfully sent WhatsApp message", "customer_phone": "+91996****", "correlation_id": "b1e77512-cb80-4c39-beb5-60ca53a51c22", "task_id": "22ae4987-ef3b-485d-b8f7-7f26eb53fed7", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "level": "info", "timestamp": "2025-07-31T13:36:21.247335Z"}
+celery-worker-1           | [2025-07-31 13:36:21,248: WARNING/ForkPoolWorker-1] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 1, "max_retries": 5, "recipient": "+919967680579", "message_id": "wamid.HBgMOTE5OTY3NjgwNTc5FQIAERgSQ0I1RkMyN0FFMkJFNDQzM0E4AA==", "event": "Successfully sent WhatsApp message", "customer_phone": "+91996****", "correlation_id": "b1e77512-cb80-4c39-beb5-60ca53a51c22", "task_id": "22ae4987-ef3b-485d-b8f7-7f26eb53fed7", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "level": "info", "timestamp": "2025-07-31T13:36:21.247975Z"}
+celery-worker-1           | [2025-07-31 13:36:21,248: WARNING/ForkPoolWorker-1] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 1, "max_retries": 5, "processing_time": 1.43, "event": "Task completed successfully", "customer_phone": "+91996****", "correlation_id": "b1e77512-cb80-4c39-beb5-60ca53a51c22", "task_id": "22ae4987-ef3b-485d-b8f7-7f26eb53fed7", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "level": "info", "timestamp": "2025-07-31T13:36:21.248270Z"}
+celery-worker-1           | [2025-07-31 13:36:21,258: INFO/ForkPoolWorker-1] Task process_and_reply_task[22ae4987-ef3b-485d-b8f7-7f26eb53fed7] succeeded in 1.441727801982779s: {'status': 'success', 'processing_time': 1.4311528205871582}
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "status": "sent", "msg_id": "wamid.HBgMOTE5OTY3NjgwNTc5FQIAERgSQ0I1RkMyN0FFMkJFNDQzM0E4AA==", "event": "Received message status update", "method": "POST", "correlation_id": "24570c0f-7c1d-48a0-9ce3-b1987277d18f", "path": "/api/webhook", "level": "info"}
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "status_code": 200, "duration_ms": 0.94, "event": "Request completed", "method": "POST", "correlation_id": "24570c0f-7c1d-48a0-9ce3-b1987277d18f", "path": "/api/webhook", "level": "info"}
+nginx-1                   | 172.18.0.1 - - [31/Jul/2025:13:36:22 +0000] "POST /api/gateway/webhook HTTP/1.1" 200 55 "-" "facebookexternalua"
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "status": "delivered", "msg_id": "wamid.HBgMOTE5OTY3NjgwNTc5FQIAERgSQ0I1RkMyN0FFMkJFNDQzM0E4AA==", "event": "Received message status update", "method": "POST", "correlation_id": "b4a977c9-021d-4e56-8c24-e0661ba39937", "path": "/api/webhook", "level": "info"}
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "status_code": 200, "duration_ms": 1.23, "event": "Request completed", "method": "POST", "correlation_id": "b4a977c9-021d-4e56-8c24-e0661ba39937", "path": "/api/webhook", "level": "info"}
+nginx-1                   | 172.18.0.1 - - [31/Jul/2025:13:36:23 +0000] "POST /api/gateway/webhook HTTP/1.1" 200 55 "-" "facebookexternalua"
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "status": "read", "msg_id": "wamid.HBgMOTE5OTY3NjgwNTc5FQIAERgSQ0I1RkMyN0FFMkJFNDQzM0E4AA==", "event": "Received message status update", "method": "POST", "correlation_id": "a5f0c1db-1cad-4565-a1db-5e17599a0e9d", "path": "/api/webhook", "level": "info"}
+nginx-1                   | 172.18.0.1 - - [31/Jul/2025:13:36:23 +0000] "POST /api/gateway/webhook HTTP/1.1" 200 55 "-" "facebookexternalua"
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "status_code": 200, "duration_ms": 3.28, "event": "Request completed", "method": "POST", "correlation_id": "a5f0c1db-1cad-4565-a1db-5e17599a0e9d", "path": "/api/webhook", "level": "info"}
+otel-collector-1          | 2025-07-31T13:36:23.792Z    info    TracesExporter  {"kind": "exporter", "data_type": "traces", "name": "logging", "resource spans": 1, "spans": 2}
+otel-collector-1          | 2025-07-31T13:36:23.792Z    info    ResourceSpans #0
+otel-collector-1          | Resource SchemaURL:
+otel-collector-1          | Resource attributes:
+otel-collector-1          |      -> telemetry.sdk.language: Str(python)
+otel-collector-1          |      -> telemetry.sdk.name: Str(opentelemetry)
+otel-collector-1          |      -> telemetry.sdk.version: Str(1.36.0)
+otel-collector-1          |      -> service.name: Str(unknown_service)
+otel-collector-1          | ScopeSpans #0
+otel-collector-1          | ScopeSpans SchemaURL:
+otel-collector-1          | InstrumentationScope src.routes.conversation
+otel-collector-1          | Span #0
+otel-collector-1          |     Trace ID       : 41273a3325625e4fc6c7c58ad600ec57
+otel-collector-1          |     Parent ID      :
+otel-collector-1          |     ID             : fbd412a8e7185ebc
+otel-collector-1          |     Name           : process_conversation
+otel-collector-1          |     Kind           : Internal
+otel-collector-1          |     Start time     : 2025-07-31 13:36:14.844619391 +0000 UTC
+otel-collector-1          |     End time       : 2025-07-31 13:36:19.805934435 +0000 UTC
+otel-collector-1          |     Status code    : Unset
+otel-collector-1          |     Status message :
+otel-collector-1          | Span #1
+otel-collector-1          |     Trace ID       : 61cdc1954006c55821e0a9abfb8a91a1
+otel-collector-1          |     Parent ID      :
+otel-collector-1          |     ID             : 6eff5eafbb9c39c2
+otel-collector-1          |     Name           : process_conversation
+otel-collector-1          |     Kind           : Internal
+otel-collector-1          |     Start time     : 2025-07-31 13:36:20.028912997 +0000 UTC
+otel-collector-1          |     End time       : 2025-07-31 13:36:20.029166934 +0000 UTC
+otel-collector-1          |     Status code    : Unset
+otel-collector-1          |     Status message :
+otel-collector-1          |     {"kind": "exporter", "data_type": "traces", "name": "logging"}
+admin-dashboard-1         | 127.0.0.1 - - [31/Jul/2025:13:36:32 +0000] "GET / HTTP/1.1" 200 477 "-" "curl/7.80.0" "-"
+ai-conversation-engine-1  | 2025-07-31 13:36:37,209 - INFO - [6305bf47-8f2d-4b2d-9a14-5d898d809e11] - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent "HTTP/1.1 200 OK"
+otel-collector-1          | 2025-07-31T13:36:38.798Z    info    TracesExporter  {"kind": "exporter", "data_type": "traces", "name": "logging", "resource spans": 1, "spans": 1}
+otel-collector-1          | 2025-07-31T13:36:38.798Z    info    ResourceSpans #0
+otel-collector-1          | Resource SchemaURL:
+otel-collector-1          | Resource attributes:
+otel-collector-1          |      -> telemetry.sdk.language: Str(python)
+otel-collector-1          |      -> telemetry.sdk.name: Str(opentelemetry)
+otel-collector-1          |      -> telemetry.sdk.version: Str(1.36.0)
+otel-collector-1          |      -> service.name: Str(unknown_service)
+otel-collector-1          | ScopeSpans #0
+otel-collector-1          | ScopeSpans SchemaURL:
+otel-collector-1          | InstrumentationScope src.routes.conversation
+otel-collector-1          | Span #0
+otel-collector-1          |     Trace ID       : 7b04c19bc737704c1323caa48d59b47e
+otel-collector-1          |     Parent ID      :
+otel-collector-1          |     ID             : 0fec450f7e44a14b
+otel-collector-1          |     Name           : health_check
+otel-collector-1          |     Kind           : Internal
+otel-collector-1          |     Start time     : 2025-07-31 13:36:35.127711897 +0000 UTC
+otel-collector-1          |     End time       : 2025-07-31 13:36:37.210728489 +0000 UTC
+otel-collector-1          |     Status code    : Unset
+otel-collector-1          |     Status message :
+otel-collector-1          |     {"kind": "exporter", "data_type": "traces", "name": "logging"}
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "redis_key": "webhook_seen:wamid.HBgMOTE5OTY3NjgwNTc5FQIAEhgUM0FCRTdFQTZFMkU2RjY1MDg4OUIA:+919967680579", "event": "Deduplication key used", "method": "POST", "correlation_id": "cd773f50-4bdd-4894-9cac-1f9184f36f0e", "path": "/api/webhook", "level": "debug"}
+whatsapp-gateway-1        | {"service": "whatsapp_gateway", "version": "1.0.0", "status_code": 200, "duration_ms": 8.17, "event": "Request completed", "method": "POST", "correlation_id": "cd773f50-4bdd-4894-9cac-1f9184f36f0e", "path": "/api/webhook", "level": "info"}
+celery-worker-1           | [2025-07-31 13:36:58,230: INFO/MainProcess] Task process_and_reply_task[90513c1e-3260-4776-a111-ca23afda1d71] received
+nginx-1                   | 172.18.0.1 - - [31/Jul/2025:13:36:58 +0000] "POST /api/gateway/webhook HTTP/1.1" 200 46 "-" "facebookexternalua"
+celery-worker-1           | [2025-07-31 13:36:58,231: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 0, "max_retries": 5, "event": "Starting message processing task", "task_id": "90513c1e-3260-4776-a111-ca23afda1d71", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cd773f50-4bdd-4894-9cac-1f9184f36f0e", "level": "info", "timestamp": "2025-07-31T13:36:58.231602Z"}
+ai-conversation-engine-1  | 2025-07-31 13:36:58,259 - INFO - [cffb2a0b-32d7-417e-a55e-3bccc920de21] - {"event": "Attempting response generation with primary LLM (Gemini).", "timestamp": "2025-07-31T13:36:58.259437Z", "level": "info"}
+celery-worker-1           | [2025-07-31 13:36:58,232: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 0, "max_retries": 5, "endpoint": "http://ai-conversation-engine:5001/ai/v1/process", "event": "Calling AI service", "task_id": "90513c1e-3260-4776-a111-ca23afda1d71", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cd773f50-4bdd-4894-9cac-1f9184f36f0e", "level": "debug", "timestamp": "2025-07-31T13:36:58.232597Z"}
+ai-conversation-engine-1  | 2025-07-31 13:37:00,353 - INFO - [cffb2a0b-32d7-417e-a55e-3bccc920de21] - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+ai-conversation-engine-1  | 2025-07-31 13:37:00,355 - ERROR - [cffb2a0b-32d7-417e-a55e-3bccc920de21] - {"exc_info": true, "event": "Critical error processing message", "timestamp": "2025-07-31T13:37:00.355025Z", "level": "error"}
+celery-worker-1           | [2025-07-31 13:37:00,358: INFO/ForkPoolWorker-2] HTTP Request: POST http://ai-conversation-engine:5001/ai/v1/process "HTTP/1.1 500 "
+ai-conversation-engine-1  | 2025-07-31 13:37:00,355 - WARNING - [cffb2a0b-32d7-417e-a55e-3bccc920de21] - {"error_type": "internal_error", "response_message": "I encountered an unexpected internal error. My team has been notified.", "conv_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "event": "AI processor returned an error", "timestamp": "2025-07-31T13:37:00.355406Z", "level": "warning"}
+celery-worker-1           | [2025-07-31 13:37:00,360: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 0, "max_retries": 5, "detail": "HTTP 500: {\"error\":\"internal_server_error\",\"message\":\"I encountered an unexpected internal error. My team has been notified.\",\"timestamp\":1753969020}\n", "event": "AI service HTTP error", "task_id": "90513c1e-3260-4776-a111-ca23afda1d71", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cd773f50-4bdd-4894-9cac-1f9184f36f0e", "level": "error", "timestamp": "2025-07-31T13:37:00.360076Z"}
+celery-worker-1           | [2025-07-31 13:37:00,360: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 0, "max_retries": 5, "error": "AI service server error: HTTP 500: {\"error\":\"internal_server_error\",\"message\":\"I encountered an unexpected internal error. My team has been notified.\",\"timestamp\":1753969020}\n", "error_type": "AIServiceError", "exc_info": true, "event": "Task failed, will be retried if applicable", "task_id": "90513c1e-3260-4776-a111-ca23afda1d71", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cd773f50-4bdd-4894-9cac-1f9184f36f0e", "level": "error", "timestamp": "2025-07-31T13:37:00.360299Z"}
+redis-1                   | 1:M 31 Jul 2025 13:37:00.439 * 100 changes in 300 seconds. Saving...
+celery-worker-1           | [2025-07-31 13:37:00,363: INFO/MainProcess] Task process_and_reply_task[90513c1e-3260-4776-a111-ca23afda1d71] received
+redis-1                   | 1:M 31 Jul 2025 13:37:00.440 * Background saving started by pid 16
+celery-worker-1           | [2025-07-31 13:37:00,378: INFO/ForkPoolWorker-2] Task process_and_reply_task[90513c1e-3260-4776-a111-ca23afda1d71] retry: Retry in 2s: AIServiceError('AI service server error: HTTP 500: {"error":"internal_server_error","message":"I encountered an unexpected internal error. My team has been notified.","timestamp":1753969020}\n')
+redis-1                   | 16:C 31 Jul 2025 13:37:00.450 * DB saved on disk
+redis-1                   | 16:C 31 Jul 2025 13:37:00.450 * Fork CoW for RDB: current 0 MB, peak 0 MB, average 0 MB
+redis-1                   | 1:M 31 Jul 2025 13:37:00.541 * Background saving terminated with success
+admin-dashboard-1         | 127.0.0.1 - - [31/Jul/2025:13:37:02 +0000] "GET / HTTP/1.1" 200 477 "-" "curl/7.80.0" "-"
+celery-worker-1           | [2025-07-31 13:37:02,362: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 1, "max_retries": 5, "event": "Starting message processing task", "task_id": "90513c1e-3260-4776-a111-ca23afda1d71", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cd773f50-4bdd-4894-9cac-1f9184f36f0e", "level": "info", "timestamp": "2025-07-31T13:37:02.362506Z"}
+celery-worker-1           | [2025-07-31 13:37:02,363: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 1, "max_retries": 5, "endpoint": "http://ai-conversation-engine:5001/ai/v1/process", "event": "Calling AI service", "task_id": "90513c1e-3260-4776-a111-ca23afda1d71", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cd773f50-4bdd-4894-9cac-1f9184f36f0e", "level": "debug", "timestamp": "2025-07-31T13:37:02.363216Z"}
+celery-worker-1           | [2025-07-31 13:37:02,388: INFO/ForkPoolWorker-2] HTTP Request: POST http://ai-conversation-engine:5001/ai/v1/process "HTTP/1.1 200 "
+celery-worker-1           | [2025-07-31 13:37:02,389: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 1, "max_retries": 5, "event": "AI service response received successfully", "task_id": "90513c1e-3260-4776-a111-ca23afda1d71", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cd773f50-4bdd-4894-9cac-1f9184f36f0e", "level": "debug", "timestamp": "2025-07-31T13:37:02.389340Z"}
+celery-worker-1           | [2025-07-31 13:37:02,389: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 1, "max_retries": 5, "recipient": "+919967680579", "event": "Dispatching synchronous send_message to a new event loop.", "task_id": "90513c1e-3260-4776-a111-ca23afda1d71", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cd773f50-4bdd-4894-9cac-1f9184f36f0e", "level": "info", "timestamp": "2025-07-31T13:37:02.389565Z"}
+celery-worker-1           | [2025-07-31 13:37:02,389: WARNING/ForkPoolWorker-2] {"event": "Sync WhatsApp Service initialized.", "task_id": "90513c1e-3260-4776-a111-ca23afda1d71", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cd773f50-4bdd-4894-9cac-1f9184f36f0e", "level": "info", "timestamp": "2025-07-31T13:37:02.389675Z"}
+celery-worker-1           | [2025-07-31 13:37:02,389: WARNING/ForkPoolWorker-2] {"recipient": "+919967680579", "event": "Dispatching synchronous send_message to event loop.", "task_id": "90513c1e-3260-4776-a111-ca23afda1d71", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cd773f50-4bdd-4894-9cac-1f9184f36f0e", "level": "info", "timestamp": "2025-07-31T13:37:02.389754Z"}
+celery-worker-1           | [2025-07-31 13:37:02,390: WARNING/ForkPoolWorker-2] {"recipient": "+919967680579", "error": "Event loop is closed", "exc_info": true, "event": "An unexpected error occurred in the sync wrapper", "task_id": "90513c1e-3260-4776-a111-ca23afda1d71", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cd773f50-4bdd-4894-9cac-1f9184f36f0e", "level": "error", "timestamp": "2025-07-31T13:37:02.390162Z"}
+celery-worker-1           | [2025-07-31 13:37:02,390: WARNING/ForkPoolWorker-2] {"service": "whatsapp_gateway", "version": "1.0.0", "retry_count": 1, "max_retries": 5, "error": "WhatsApp service returned None - message sending failed", "error_type": "WhatsAppServiceError", "event": "Task failed permanently (non-retryable)", "task_id": "90513c1e-3260-4776-a111-ca23afda1d71", "conversation_id": "a1282578-fde0-492f-ae11-900cb3bd1def", "customer_phone": "+91996****", "correlation_id": "cd773f50-4bdd-4894-9cac-1f9184f36f0e", "level": "error", "timestamp": "2025-07-31T13:37:02.390302Z"}
+celery-worker-1           | [2025-07-31 13:37:02,395: ERROR/ForkPoolWorker-2] Task process_and_reply_task[90513c1e-3260-4776-a111-ca23afda1d71] raised unexpected: WhatsAppServiceError('WhatsApp service returned None - message sending failed')
+celery-worker-1           | Traceback (most recent call last):
+celery-worker-1           |   File "/opt/venv/lib/python3.11/site-packages/celery/app/trace.py", line 453, in trace_task
+celery-worker-1           |     R = retval = fun(*args, **kwargs)
+celery-worker-1           |                  ^^^^^^^^^^^^^^^^^^^^
+celery-worker-1           |   File "/opt/venv/lib/python3.11/site-packages/celery/app/trace.py", line 736, in __protected_call__
+celery-worker-1           |     return self.run(*args, **kwargs)
+celery-worker-1           |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+celery-worker-1           |   File "/opt/venv/lib/python3.11/site-packages/celery/app/autoretry.py", line 38, in run
+celery-worker-1           |     return task._orig_run(*args, **kwargs)
+celery-worker-1           |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+celery-worker-1           |   File "/app/src/tasks.py", line 228, in process_and_reply_task
+celery-worker-1           |     send_whatsapp_message(customer_phone, ai_response, task_logger, WhatsAppService)
+celery-worker-1           |   File "/app/src/tasks.py", line 349, in send_whatsapp_message
+celery-worker-1           |     raise WhatsAppServiceError("WhatsApp service returned None - message sending failed")
+celery-worker-1           | src.tasks.WhatsAppServiceError: WhatsApp service returned None - message sending failed
+otel-collector-1          | 2025-07-31T13:37:03.804Z    info    TracesExporter  {"kind": "exporter", "data_type": "traces", "name": "logging", "resource spans": 1, "spans": 2}
+otel-collector-1          | 2025-07-31T13:37:03.806Z    info    ResourceSpans #0
+otel-collector-1          | Resource SchemaURL:
+otel-collector-1          | Resource attributes:
+otel-collector-1          |      -> telemetry.sdk.language: Str(python)
+otel-collector-1          |      -> telemetry.sdk.name: Str(opentelemetry)
+otel-collector-1          |      -> telemetry.sdk.version: Str(1.36.0)
+otel-collector-1          |      -> service.name: Str(unknown_service)
+otel-collector-1          | ScopeSpans #0
+otel-collector-1          | ScopeSpans SchemaURL:
+otel-collector-1          | InstrumentationScope src.routes.conversation
+otel-collector-1          | Span #0
+otel-collector-1          |     Trace ID       : cffbd361fe55fa2cc94c6bde534ad9c4
+otel-collector-1          |     Parent ID      :
+otel-collector-1          |     ID             : 8e75b13ba9276db0
+otel-collector-1          |     Name           : process_conversation
+otel-collector-1          |     Kind           : Internal
+otel-collector-1          |     Start time     : 2025-07-31 13:36:58.259035452 +0000 UTC
+otel-collector-1          |     End time       : 2025-07-31 13:37:00.355806737 +0000 UTC
+otel-collector-1          |     Status code    : Unset
+otel-collector-1          |     Status message :
+otel-collector-1          | Span #1
+otel-collector-1          |     Trace ID       : b3c168d39c8ee6fa462b5a5cc1beacb6
+otel-collector-1          |     Parent ID      :
+otel-collector-1          |     ID             : 8db9b99a037b46c7
+otel-collector-1          |     Name           : process_conversation
+otel-collector-1          |     Kind           : Internal
+otel-collector-1          |     Start time     : 2025-07-31 13:37:02.387233422 +0000 UTC
+otel-collector-1          |     End time       : 2025-07-31 13:37:02.38759096 +0000 UTC
+otel-collector-1          |     Status code    : Unset
+otel-collector-1          |     Status message :
+otel-collector-1          |     {"kind": "exporter", "data_type": "traces", "name": "logging"}
+ai-conversation-engine-1  | 2025-07-31 13:37:07,986 - INFO - [b29187e7-63a2-4f21-8276-60bd961bc145] - HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:embedContent "HTTP/1.1 200 OK"
+otel-collector-1          | 2025-07-31T13:37:08.810Z    info    TracesExporter  {"kind": "exporter", "data_type": "traces", "name": "logging", "resource spans": 1, "spans": 1}
+otel-collector-1          | 2025-07-31T13:37:08.810Z    info    ResourceSpans #0
+otel-collector-1          | Resource SchemaURL:
+otel-collector-1          | Resource attributes:
+otel-collector-1          |      -> telemetry.sdk.language: Str(python)
+otel-collector-1          |      -> telemetry.sdk.name: Str(opentelemetry)
+otel-collector-1          |      -> telemetry.sdk.version: Str(1.36.0)
+otel-collector-1          |      -> service.name: Str(unknown_service)
+otel-collector-1          | ScopeSpans #0
+otel-collector-1          | ScopeSpans SchemaURL:
+otel-collector-1          | InstrumentationScope src.routes.conversation
+otel-collector-1          | Span #0
+otel-collector-1          |     Trace ID       : eb1df6710e0885f84b6942821ac3db13
+otel-collector-1          |     Parent ID      :
+otel-collector-1          |     ID             : 88df7bc0dac88e7b
+otel-collector-1          |     Name           : health_check
+otel-collector-1          |     Kind           : Internal
+otel-collector-1          |     Start time     : 2025-07-31 13:37:07.292758792 +0000 UTC
+otel-collector-1          |     End time       : 2025-07-31 13:37:07.990417939 +0000 UTC
+otel-collector-1          |     Status code    : Unset
+otel-collector-1          |     Status message :
+otel-collector-1          |     {"kind": "exporter", "data_type": "traces", "name": "logging"}

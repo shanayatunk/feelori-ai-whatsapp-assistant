@@ -243,13 +243,13 @@ class RateLimiter:
         if keys_to_remove:
             logger.debug(f"Cleaned up {len(keys_to_remove)} expired rate limit entries")
 
-    def get_rate_limit_key(self) -> str:
+    async def get_rate_limit_key(self) -> str:
         """
         Generates a secure composite rate limit key for Quart requests.
         This method is used when the rate limiter is used as a decorator.
         """
         try:
-            data = request.get_json(silent=True) or {}
+            data = await request.get_json(silent=True) or {}
             conv_id = data.get('conv_id', '')
             
             api_key = request.headers.get('X-API-Key', '')
@@ -281,8 +281,11 @@ class RateLimiter:
             @wraps(f)
             async def decorated_function(*args: Any, **kwargs: Any):
                 try:
-                    identifier = identifier_func() if identifier_func else self.get_rate_limit_key()
-                    
+                    if identifier_func:
+                        identifier = identifier_func()
+                    else:
+                        identifier = await self.get_rate_limit_key()
+
                     if not await self.is_allowed(identifier):
                         response = jsonify({
                             "error": "Rate limit exceeded",

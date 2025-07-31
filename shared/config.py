@@ -2,9 +2,8 @@
 import os
 from pathlib import Path
 from pydantic_settings import BaseSettings
-# MODIFIED: Import all necessary validators from Pydantic v2
 from pydantic import Field, SecretStr, model_validator, field_validator
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 def read_secret_file(file_path_env: str) -> Optional[str]:
     """
@@ -20,7 +19,8 @@ def read_secret_file(file_path_env: str) -> Optional[str]:
         if secret_file.exists():
             return secret_file.read_text().strip()
         else:
-            print(f"Warning: Secret file {file_path} does not exist")
+            # Quieter warning for Celery which might not have all envs set initially
+            # print(f"Warning: Secret file {file_path} does not exist")
             return None
     except Exception as e:
         print(f"Error reading secret file {file_path}: {e}")
@@ -42,11 +42,13 @@ class Settings(BaseSettings):
     REDIS_PASSWORD: Optional[SecretStr] = None
     API_KEY: Optional[SecretStr] = None
     SECRET_KEY: Optional[SecretStr] = None
-    
+    # --- ADD THIS LINE ---
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = Field("http://localhost:4318", env="OTEL_EXPORTER_OTLP_ENDPOINT")  
     # --- Non-Secret Configuration ---
     ECOMMERCE_API_URL: str = Field(..., env="ECOMMERCE_API_URL")
     ALLOWED_ORIGINS: str = Field("*", env="ALLOWED_ORIGINS")
-    GEMINI_MODEL: str = Field("gemini-1.5-flash-latest", env="GEMINI_MODEL")
+    GEMINI_MODEL: str = Field("gemini-2.5-flash-lite", env="GEMINI_MODEL")
+    OPENAI_MODEL: str = Field("gpt-4o", env="OPENAI_MODEL")
     EMBEDDING_MODEL: str = Field("text-embedding-004", env="EMBEDDING_MODEL")
     EMBEDDING_DIMENSION: int = Field(768, ge=128, le=2048)
     EMBEDDING_MAX_RETRIES: int = Field(3, ge=1)
@@ -118,8 +120,10 @@ class Settings(BaseSettings):
         for file_env, secret_env in secret_mappings.items():
             secret_value = read_secret_file(file_env)
             if secret_value:
-                os.environ[secret_env] = secret_value
-                print(f"✅ Loaded {secret_env} from secret file")
+                # Set the environment variable so Pydantic can pick it up
+                if os.getenv(secret_env) is None:
+                    os.environ[secret_env] = secret_value
+                    print(f"✅ Loaded {secret_env} from secret file")
             else:
                 print(f"⚠️  Could not load {secret_env} from {file_env}")
         
@@ -131,18 +135,34 @@ class Settings(BaseSettings):
 
     @model_validator(mode='after')
     def build_redis_url(self) -> 'Settings':
-        """Construct the Redis connection URL after loading other values."""
+        """
+        Construct the Redis connection URL after loading other values.
+        This version is robust and works for both the web app and Celery worker.
+        """
         if self.REDIS_URL:
+            # If the URL is already set, do nothing.
             return self
+
+        password_str = None
         if self.REDIS_PASSWORD:
-            password = self.REDIS_PASSWORD.get_secret_value()
-            self.REDIS_URL = f"redis://:{password}@{self.REDIS_HOST}:{self.REDIS_PORT}/0"
+            # If the password was loaded by __init__, use it.
+            password_str = self.REDIS_PASSWORD.get_secret_value()
+        else:
+            # Fallback for Celery: Read the password file directly.
+            # This makes the worker independent of the __init__ loading method.
+            password_from_file = read_secret_file('REDIS_PASSWORD_FILE')
+            if password_from_file:
+                password_str = password_from_file
+
+        # Construct the final URL
+        if password_str:
+            self.REDIS_URL = f"redis://:{password_str}@{self.REDIS_HOST}:{self.REDIS_PORT}/0"
         else:
             self.REDIS_URL = f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/0"
+        
         print("✅ Constructed REDIS_URL")
         return self
 
-    # MODIFIED: Replaced @validator with @field_validator
     @field_validator('ECOMMERCE_API_URL')
     @classmethod
     def validate_ecommerce_url(cls, v):
@@ -150,7 +170,6 @@ class Settings(BaseSettings):
             raise ValueError('ECOMMERCE_API_URL must be a valid HTTP/HTTPS URL')
         return v
 
-    # MODIFIED: Replaced @validator with @field_validator
     @field_validator('ALLOWED_ORIGINS')
     @classmethod
     def validate_allowed_origins(cls, v):
@@ -161,7 +180,6 @@ class Settings(BaseSettings):
         origins = [origin.strip() for origin in v.split(',') if origin.strip()]
         return ','.join(origins)
 
-    # MODIFIED: Replaced @validator with @field_validator
     @field_validator('LOG_LEVEL')
     @classmethod
     def validate_log_level(cls, v):
@@ -170,7 +188,6 @@ class Settings(BaseSettings):
             raise ValueError(f'LOG_LEVEL must be one of: {allowed_levels}')
         return v.upper()
 
-    # MODIFIED: Replaced @validator with @field_validator
     @field_validator('SUPPORTED_MESSAGE_TYPES')
     @classmethod
     def validate_message_types(cls, v):
@@ -197,7 +214,7 @@ class Settings(BaseSettings):
         """Validate that at least one AI service key is available."""
         if not self.GEMINI_API_KEY and not self.OPENAI_API_KEY:
             raise ValueError("At least one AI service API key (GEMINI_API_KEY or OPENAI_API_KEY) must be provided.")
-
+    HTTP_CLIENT_TIMEOUT: int = 30
     class Config:
         validate_assignment = True
         case_sensitive = True

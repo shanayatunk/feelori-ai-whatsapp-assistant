@@ -84,7 +84,7 @@ class KnowledgeRetriever:
                 )
                 self._documents.append(doc)
             except ValueError as e:
-                logger.warning(f"Skipping invalid document at index {i}", error=str(e))
+                logger.warning(f"Skipping invalid document at index {i}. Error: {e}")
     
     def _load_default_documents(self) -> None:
         """Load default hardcoded documents from environment or a fallback."""
@@ -161,7 +161,7 @@ class KnowledgeRetriever:
                     valid_embeddings.append(result.embedding)
                     valid_documents.append(doc)
                 else:
-                    logger.warning(f"Failed to generate embedding for document {doc.id}", error=result.error)
+                    logger.warning(f"Failed to generate embedding for document {doc.id}. Error: {result.error}")
             
             self._embeddings = valid_embeddings
             self._documents = valid_documents # Prune documents that failed embedding

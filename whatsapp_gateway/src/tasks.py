@@ -1,4 +1,4 @@
-# whatsapp_gateway/src/tasks.py (Production-Ready Version with Simplified Retry)
+# whatsapp_gateway/src/tasks.py (Production-Ready Version with Fixed Event Loop Handling)
 
 import os
 import logging
@@ -9,9 +9,15 @@ import hashlib
 import json
 
 import httpx
+import asyncio
+from functools import wraps
 from celery import Celery
 from celery.exceptions import Retry, MaxRetriesExceededError
 from redis.exceptions import RedisError
+
+# --- CORRECTED CONFIGURATION ---
+# Import the central settings object
+from shared.config import settings
 
 # Structured logging with correlation support
 import structlog
@@ -30,14 +36,11 @@ logger = structlog.get_logger(__name__).bind(
 )
 
 # --- CONFIGURATION ---
-AI_SERVICE_URL = os.getenv('AI_SERVICE_URL')
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')
-CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://redis:6379/0')
-
+AI_SERVICE_URL = settings.AI_SERVICE_URL
 # Timeout configurations
-AI_SERVICE_TIMEOUT = int(os.getenv('AI_SERVICE_TIMEOUT', '90'))
-TASK_DUPLICATE_TTL = int(os.getenv('TASK_DUPLICATE_TTL', '300'))  # 5 minutes
-MAX_MESSAGE_LENGTH = int(os.getenv('MAX_MESSAGE_LENGTH', '4096'))
+AI_SERVICE_TIMEOUT = settings.AI_SERVICE_TIMEOUT
+TASK_DUPLICATE_TTL = 300  # 5 minutes
+MAX_MESSAGE_LENGTH = settings.MAX_MESSAGE_LENGTH
 
 # Validate required configuration
 if not AI_SERVICE_URL:
@@ -46,8 +49,8 @@ if not AI_SERVICE_URL:
 # --- CELERY APP INITIALIZATION ---
 celery_app = Celery(
     'whatsapp_gateway_tasks',
-    broker=CELERY_BROKER_URL,
-    backend=CELERY_RESULT_BACKEND
+    broker=settings.REDIS_URL,
+    backend=settings.REDIS_URL
 )
 
 celery_app.conf.update(
@@ -121,6 +124,13 @@ def generate_task_key(conversation_id: str, message: str) -> str:
     message_hash = hashlib.sha256(message.encode()).hexdigest()[:16]
     return f"task:{conversation_id}:{message_hash}"
 
+def run_in_new_loop(coro):
+    """
+    Runs a coroutine safely in a managed asyncio event loop.
+    This is essential for calling async code from a synchronous context like Celery.
+    """
+    return asyncio.run(coro)
+
 def check_and_set_task_lock(redis_client, task_key: str) -> bool:
     """
     Atomically check and set task lock to prevent duplicate processing.
@@ -146,8 +156,8 @@ def cleanup_task_lock(redis_client, task_key: str) -> None:
     name='process_and_reply_task',
     bind=True,
     autoretry_for=(httpx.RequestError, httpx.TimeoutException, AIServiceError),
-    retry_backoff=True,
-    retry_backoff_max=300,  # Max 5 minutes
+    retry_backoff=2,
+    retry_backoff_max=600,
     retry_jitter=True,
     max_retries=5
 )
@@ -181,8 +191,9 @@ def process_and_reply_task(
     task_logger.info("Starting message processing task")
     
     try:
+        # Import the correct WhatsApp service class and redis client
         from src.services.whatsapp_service_sync import WhatsAppService
-        from src.services.cache import redis_client
+        from shared.cache import redis_client
     except ImportError as e:
         task_logger.error("Failed to import required services", error=str(e))
         raise TaskError(f"Service import failed: {e}")
@@ -210,7 +221,8 @@ def process_and_reply_task(
             correlation_id, task_logger
         )
         
-        send_whatsapp_message(customer_phone, ai_response, task_logger)
+        # Send the WhatsApp message using the imported service class
+        send_whatsapp_message(customer_phone, ai_response, task_logger, WhatsAppService)
         
         duration = time.time() - start_time
         task_logger.info(
@@ -258,7 +270,7 @@ def call_ai_service(
     """
     Call the AI service to process the message.
     """
-    ai_endpoint = f"{AI_SERVICE_URL.rstrip('/')}/ai/process"
+    ai_endpoint = f"{AI_SERVICE_URL.rstrip('/')}/ai/v1/process"
     
     payload = {
         "conv_id": conversation_id,
@@ -269,6 +281,7 @@ def call_ai_service(
     
     headers = {
         'X-Correlation-ID': correlation_id,
+        'X-API-Key': settings.INTERNAL_API_KEY.get_secret_value(),
         'Content-Type': 'application/json',
         'User-Agent': 'WhatsApp-Gateway/1.0.0'
     }
@@ -304,27 +317,52 @@ def call_ai_service(
         task_logger.error("AI service connection error", error=str(e))
         raise AIServiceError(f"AI service connection failed: {e}")
         
-    except (ValueError, KeyError) as e:
+    except (json.JSONDecodeError, KeyError) as e:
         task_logger.error("AI service response parsing error", error=str(e))
         raise TaskError(f"Invalid AI service response: {e}")
 
-def send_whatsapp_message(customer_phone: str, message: str, task_logger) -> None:
+def send_whatsapp_message(customer_phone: str, message_content: str, task_logger, whatsapp_service_class) -> None:
     """
-    Send message via WhatsApp service.
+    Sends a message using the synchronous wrapper for the WhatsApp service.
+    This version correctly manages its own asyncio event loop to prevent errors
+    during Celery retries.
     """
-    from src.services.whatsapp_service_sync import WhatsAppService
     try:
-        whatsapp_service = WhatsAppService()
-        success = whatsapp_service.send_message(customer_phone, message)
+        task_logger.info("Dispatching synchronous send_message to a new event loop.", recipient=customer_phone)
+
+        def send_sync() -> Optional[str]:
+            """Wrapper function to instantiate and call the sync service."""
+            service = whatsapp_service_class()
+            # This is a synchronous call
+            return service.send_message(customer_phone, message_content)
+
+        # Use asyncio.to_thread to run the blocking sync function in a separate thread,
+        # managed by a new event loop created by run_in_new_loop.
+        # This prevents the "Event loop is closed" error on Celery retries.
+        message_id = run_in_new_loop(asyncio.to_thread(send_sync))
+
+        if not message_id:
+            raise WhatsAppServiceError("WhatsApp service returned None, indicating a failure to send.")
+
+        task_logger.info(
+            "Successfully dispatched message to WhatsApp service",
+            recipient=customer_phone,
+            message_id=message_id
+        )
         
-        if not success:
-            raise WhatsAppServiceError("WhatsApp service returned failure on send")
-            
-        task_logger.info("WhatsApp message sent successfully")
-        
+    except WhatsAppServiceError as e:
+        # Re-raise known, non-retryable WhatsApp errors
+        task_logger.error("A known WhatsApp service error occurred.", error=str(e))
+        raise
     except Exception as e:
-        task_logger.error("Failed to send WhatsApp message", error=str(e))
-        raise WhatsAppServiceError(f"WhatsApp sending failed: {e}")
+        # Catch any other unexpected errors during the process
+        task_logger.error(
+            "An unexpected error occurred while trying to send WhatsApp message",
+            error=str(e),
+            exc_info=True
+        )
+        # Wrap the unexpected error in our non-retryable error type
+        raise WhatsAppServiceError(f"Unexpected error during WhatsApp sending: {e}")
 
 # Health check task for monitoring
 @celery_app.task(name='health_check_task')

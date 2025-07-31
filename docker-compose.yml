@@ -1,13 +1,20 @@
 services:
-  whatsapp-gateway:
+  # This service runs database migrations and then exits.
+  migrations:
     build:
       context: ./whatsapp_gateway
       dockerfile: Dockerfile
+    command: sh -c "echo 'Running database migrations...' && flask db upgrade && echo 'Migrations complete.'"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # COPIED ALL ENVIRONMENT VARIABLES FROM whatsapp-gateway
     environment:
       - FLASK_APP=src.main
+      - PYTHONPATH=/app
+      - WHATSAPP_API_VERSION=v23.0
       - ECOMMERCE_API_URL=http://ecommerce-integration:5002
       - AI_SERVICE_URL=http://ai-conversation-engine:5001
-      - PYTHONPATH=/home/appuser
       - SHOPIFY_STORE_URL=https://feelori.myshopify.com
       - DATABASE_URL_FILE=/run/secrets/database_url.txt
       - WHATSAPP_ACCESS_TOKEN_FILE=/run/secrets/whatsapp_access_token.txt
@@ -19,17 +26,24 @@ services:
       - WHATSAPP_WEBHOOK_SECRET_FILE=/run/secrets/webhook_secret.txt
       - API_KEY_FILE=/run/secrets/api_key.txt
       - REDIS_PASSWORD_FILE=/run/secrets/redis_password.txt
-    volumes: # MODIFIED: Use the absolute path to your secrets folder
+    volumes:
       - C:/Users/hp/Documents/feelori-secrets:/run/secrets:ro
-      - ./shared:/home/appuser/shared
-      - whatsapp_data:/home/appuser/data
+      - ./whatsapp_gateway:/app
+      - ./shared:/app/shared:ro
+    networks:
+      - ai-assistant-network
+
+  whatsapp-gateway:
+    build:
+      context: ./whatsapp_gateway
+      dockerfile: Dockerfile
     depends_on:
-      postgres:
-        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
       redis:
         condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 10
@@ -37,6 +51,29 @@ services:
     restart: unless-stopped
     networks:
       - ai-assistant-network
+    environment:
+      - FLASK_APP=src.main
+      - PYTHONPATH=/app
+      - WHATSAPP_API_VERSION=v23.0
+      - ECOMMERCE_API_URL=http://ecommerce-integration:5002
+      - AI_SERVICE_URL=http://ai-conversation-engine:5001
+      - SHOPIFY_STORE_URL=https://feelori.myshopify.com
+      - DATABASE_URL_FILE=/run/secrets/database_url.txt
+      - WHATSAPP_ACCESS_TOKEN_FILE=/run/secrets/whatsapp_access_token.txt
+      - WHATSAPP_PHONE_NUMBER_ID_FILE=/run/secrets/whatsapp_phone_number_id.txt
+      - WHATSAPP_VERIFY_TOKEN_FILE=/run/secrets/whatsapp_verify_token.txt
+      - INTERNAL_API_KEY_FILE=/run/secrets/internal_api_key.txt
+      - GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key.txt
+      - OPENAI_API_KEY_FILE=/run/secrets/openai_api_key.txt
+      - WHATSAPP_WEBHOOK_SECRET_FILE=/run/secrets/webhook_secret.txt
+      - API_KEY_FILE=/run/secrets/api_key.txt
+      - REDIS_PASSWORD_FILE=/run/secrets/redis_password.txt
+      - SHOPIFY_ACCESS_TOKEN_FILE=/run/secrets/shopify_access_token.txt
+    volumes:
+      - C:/Users/hp/Documents/feelori-secrets:/run/secrets:ro
+      - ./shared:/app/shared:ro
+      - ./whatsapp_gateway:/app
+      - whatsapp_data:/app/data
 
   celery-worker:
     build:
@@ -44,14 +81,19 @@ services:
       dockerfile: Dockerfile
     command: celery -A src.tasks:celery_app worker --loglevel=info --concurrency=2
     depends_on:
+      migrations:
+        condition: service_completed_successfully
       redis:
         condition: service_started
-      whatsapp-gateway:
-        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ai-assistant-network
     environment:
+      - FLASK_APP=src.main
+      - PYTHONPATH=/app
+      - WHATSAPP_API_VERSION=v23.0
       - ECOMMERCE_API_URL=http://ecommerce-integration:5002
       - AI_SERVICE_URL=http://ai-conversation-engine:5001
-      - PYTHONPATH=/home/appuser
       - SHOPIFY_STORE_URL=https://feelori.myshopify.com
       - DATABASE_URL_FILE=/run/secrets/database_url.txt
       - INTERNAL_API_KEY_FILE=/run/secrets/internal_api_key.txt
@@ -60,53 +102,56 @@ services:
       - WHATSAPP_ACCESS_TOKEN_FILE=/run/secrets/whatsapp_access_token.txt
       - WHATSAPP_PHONE_NUMBER_ID_FILE=/run/secrets/whatsapp_phone_number_id.txt
       - WHATSAPP_VERIFY_TOKEN_FILE=/run/secrets/whatsapp_verify_token.txt
+      - WHATSAPP_WEBHOOK_SECRET_FILE=/run/secrets/webhook_secret.txt
       - REDIS_PASSWORD_FILE=/run/secrets/redis_password.txt
-    volumes: # MODIFIED: Use the absolute path to your secrets folder
+      - SHOPIFY_ACCESS_TOKEN_FILE=/run/secrets/shopify_access_token.txt
+    volumes:
       - C:/Users/hp/Documents/feelori-secrets:/run/secrets:ro
-      - ./shared:/home/appuser/shared
-      - whatsapp_data:/home/appuser/data
-    restart: unless-stopped
-    networks:
-      - ai-assistant-network
+      - ./shared:/app/shared:ro
+      - ./whatsapp_gateway:/app
+      - whatsapp_data:/app/data
 
   ai-conversation-engine:
     build:
       context: ./ai_conversation_engine
       dockerfile: Dockerfile
-    environment:
-      - FLASK_APP=src.main
-      - ECOMMERCE_API_URL=http://ecommerce-integration:5002
-      - ALLOWED_ORIGINS=http://localhost:8080,http://127.0.0.1:8080
-      - PYTHONPATH=/home/appuser
-      - GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key.txt
-      - OPENAI_API_KEY_FILE=/run/secrets/openai_api_key.txt
-      - INTERNAL_API_KEY_FILE=/run/secrets/internal_api_key.txt
-      - SHOPIFY_STORE_URL=https://feelori.myshopify.com
-    volumes: # MODIFIED: Use the absolute path to your secrets folder
-      - C:/Users/hp/Documents/feelori-secrets:/run/secrets:ro
-      - ./ai_conversation_engine:/home/appuser
-      - ./shared:/home/appuser/shared
+    depends_on:
+      - otel-collector
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/ai/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5001/ai/v1/health"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 60s
     restart: unless-stopped
     networks:
       - ai-assistant-network
+    environment:
+      - FLASK_APP=src.main
+      - PYTHONPATH=/app
+      - ALLOWED_ORIGINS=http://localhost:8080,http://127.0.0.1:8080
+      - ECOMMERCE_API_URL=http://ecommerce-integration:5002
+      - SHOPIFY_STORE_URL=https://feelori.myshopify.com
+      - GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key.txt
+      - OPENAI_API_KEY_FILE=/run/secrets/openai_api_key.txt
+      - INTERNAL_API_KEY_FILE=/run/secrets/internal_api_key.txt
+      - DATABASE_URL_FILE=/run/secrets/database_url.txt
+      - WHATSAPP_ACCESS_TOKEN_FILE=/run/secrets/whatsapp_access_token.txt
+      - WHATSAPP_PHONE_NUMBER_ID_FILE=/run/secrets/whatsapp_phone_number_id.txt
+      - WHATSAPP_VERIFY_TOKEN_FILE=/run/secrets/whatsapp_verify_token.txt
+      - REDIS_PASSWORD_FILE=/run/secrets/redis_password.txt
+      - SHOPIFY_ACCESS_TOKEN_FILE=/run/secrets/shopify_access_token.txt
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces
+      - REQUEST_TIMEOUT=15
+    volumes:
+      - C:/Users/hp/Documents/feelori-secrets:/run/secrets:ro
+      - ./ai_conversation_engine/src:/app/src
+      - ./shared:/app/shared:ro
 
   ecommerce-integration:
     build:
       context: ./ecommerce_integration
       dockerfile: Dockerfile
-    environment:
-      - FLASK_APP=src.main
-      - PYTHONPATH=/home/appuser
-      - SHOPIFY_STORE_URL=https://feelori.myshopify.com
-      - SHOPIFY_ACCESS_TOKEN_FILE=/run/secrets/shopify_access_token.txt
-    volumes: # MODIFIED: Use the absolute path to your secrets folder
-      - C:/Users/hp/Documents/feelori-secrets:/run/secrets:ro
-      - ./ecommerce_integration:/home/appuser
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5002/ecommerce/health"]
       interval: 30s
@@ -115,6 +160,17 @@ services:
     restart: unless-stopped
     networks:
       - ai-assistant-network
+    environment:
+      - FLASK_APP=src.main
+      - PYTHONPATH=/app
+      - SHOPIFY_STORE_URL=https://feelori.myshopify.com
+      - SHOPIFY_ACCESS_TOKEN_FILE=/run/secrets/shopify_access_token.txt
+      - DATABASE_URL_FILE=/run/secrets/database_url.txt
+      - INTERNAL_API_KEY_FILE=/run/secrets/internal_api_key.txt
+    volumes:
+      - C:/Users/hp/Documents/feelori-secrets:/run/secrets:ro
+      - ./ecommerce_integration/src:/app/src
+      - ./shared:/app/shared:ro
 
   admin-dashboard:
     build:
@@ -129,7 +185,7 @@ services:
     command: sh -c "exec redis-server --requirepass \"$$(cat /run/secrets/redis_password.txt)\""
     ports:
       - "6379:6379"
-    volumes: # MODIFIED: Use the absolute path to your secrets folder
+    volumes:
       - C:/Users/hp/Documents/feelori-secrets:/run/secrets:ro
       - redis_data:/data
     restart: unless-stopped
@@ -140,13 +196,6 @@ services:
     image: pgvector/pgvector:pg15
     ports:
       - "5432:5432"
-    environment:
-      - POSTGRES_DB=ai_assistant
-      - POSTGRES_USER=ai_assistant
-      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password.txt
-    volumes: # MODIFIED: Use the absolute path to your secrets folder
-      - C:/Users/hp/Documents/feelori-secrets:/run/secrets:ro
-      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "ai_assistant", "-d", "ai_assistant"]
       interval: 10s
@@ -156,15 +205,20 @@ services:
     restart: unless-stopped
     networks:
       - ai-assistant-network
+    environment:
+      - POSTGRES_DB=ai_assistant
+      - POSTGRES_USER=ai_assistant
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password.txt
+    volumes:
+      - C:/Users/hp/Documents/feelori-secrets:/run/secrets:ro
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
 
   nginx:
     image: nginx:alpine
     ports:
       - "80:80"
       - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
     depends_on:
       - whatsapp-gateway
       - ai-conversation-engine
@@ -173,6 +227,21 @@ services:
     restart: unless-stopped
     networks:
       - ai-assistant-network
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.106.0
+    command: ["--config=/etc/otel-collector-config.yml"]
+    ports:
+      - "4318:4318"
+      - "4317:4317"
+    restart: unless-stopped
+    networks:
+      - ai-assistant-network
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml
 
 volumes:
   whatsapp_data:

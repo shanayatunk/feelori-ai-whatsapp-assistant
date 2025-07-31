@@ -1,7 +1,7 @@
-# Use a specific version of Python for stability
+# Use an official Python runtime as a parent image
 FROM python:3.11.9-slim
 
-# Install system dependencies needed for both building and running
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     libpq5 \
     curl \
@@ -9,30 +9,37 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user and set up the working directory
-RUN useradd -m -u 1000 appuser
-WORKDIR /home/appuser
-USER appuser
+# Set the working directory in the container to /app for consistency
+WORKDIR /app
 
-# Set up the Python virtual environment
-ENV PATH="/home/appuser/venv/bin:$PATH"
-RUN python -m venv /home/appuser/venv
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
 
-# Copy requirements first to leverage Docker's build cache
-COPY --chown=appuser:appuser requirements.txt .
+# Install Python dependencies into a virtual environment for isolation
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code
-COPY --chown=appuser:appuser ./src ./src
-COPY --chown=appuser:appuser ./migrations ./migrations
-COPY --chown=appuser:appuser ./entrypoint.sh .
+COPY ./src ./src
+COPY ./migrations ./migrations
+COPY ./entrypoint.sh .
 RUN chmod +x ./entrypoint.sh
 
-# Expose the port the application will run on
+# Create a non-root user for security
+RUN useradd -m -u 1000 appuser
+RUN chown -R appuser:appuser /app
+USER appuser
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV FLASK_APP=src.main
+
+# Expose the port the app runs on
 EXPOSE 5000
 
-# Set the entrypoint to start the application
+# Run the entrypoint script which will then execute the CMD
 ENTRYPOINT ["./entrypoint.sh"]
 
 # The default command to start the application with Hypercorn
-CMD ["python", "-m", "hypercorn", "src.main:app", "--bind", "0.0.0.0:5000"]
+CMD ["hypercorn", "src.main:app", "--bind", "0.0.0.0:5000"]

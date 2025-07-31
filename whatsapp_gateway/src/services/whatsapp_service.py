@@ -38,9 +38,10 @@ class AsyncWhatsAppService:
     """
     def __init__(self):
         self.base_url = f"https://graph.facebook.com/{settings.WHATSAPP_API_VERSION}"
-        self.access_token = settings.WHATSAPP_ACCESS_TOKEN
+        # The access token is now read as a SecretStr, so we need to get its value
+        self.access_token = settings.WHATSAPP_ACCESS_TOKEN.get_secret_value() if settings.WHATSAPP_ACCESS_TOKEN else None
         self.phone_number_id = settings.WHATSAPP_PHONE_NUMBER_ID
-        self._session: aiohttp.ClientSession = None
+        self._session: Optional[aiohttp.ClientSession] = None
 
         # Basic phone number regex (allows for international numbers)
         self.phone_regex = re.compile(r'^[1-9]\d{6,14}$')
@@ -48,6 +49,9 @@ class AsyncWhatsAppService:
     async def _get_session(self) -> aiohttp.ClientSession:
         """Initializes and returns a reusable aiohttp session."""
         if self._session is None or self._session.closed:
+            if not self.access_token:
+                raise WhatsAppError("WhatsApp Access Token is not configured.")
+            
             headers = {
                 "Authorization": f"Bearer {self.access_token}",
                 "Content-Type": "application/json",
@@ -67,7 +71,6 @@ class AsyncWhatsAppService:
 
     def _sanitize_message(self, message: str) -> str:
         """Basic sanitization to remove common injection patterns."""
-        # Simple sanitization, consider a more robust library like bleach for production
         return message.strip()
 
     def _calculate_backoff(self, attempt: int) -> float:
@@ -120,16 +123,18 @@ class AsyncWhatsAppService:
                     return message_id
             
             except aiohttp.ClientResponseError as e:
+                body = await e.text()  # Get the full error body from the response
                 log.warning(
                     "HTTP error sending message",
                     status=e.status,
                     attempt=attempt + 1,
-                    message=e.message
+                    message=e.message,
+                    body=body  # Log the detailed error body
                 )
                 if e.status == 429: # Rate limit
                     raise RateLimitError("Rate limit exceeded")
                 if 400 <= e.status < 500 and e.status != 429:
-                    # Don't retry on client errors (e.g., bad request)
+                    # Don't retry on client errors (e.g., bad request, unauthorized)
                     raise WhatsAppError(f"Client error: {e.status}") from e
                 
                 # Retry on server errors (5xx)
